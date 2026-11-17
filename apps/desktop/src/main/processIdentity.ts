@@ -63,18 +63,21 @@ export async function readProcessIdentities(
   try {
     if (process.platform === 'win32') {
       const powershell = `${process.env.SystemRoot ?? 'C:\\Windows'}\\System32\\WindowsPowerShell\\v1.0\\powershell.exe`;
+      const filter = uniquePids.map((pid) => `ProcessId=${pid}`).join(' OR ');
+      // 系统服务可能复用旧 Cindy 的 PID；普通权限读不到它的 StartTime，
+      // 用 CIM 的创建时间与可执行文件身份区分旧登记和仍存活的实例。
       const output = await execFileUtf8(
         powershell,
         [
           '-NoProfile',
           '-NonInteractive',
           '-Command',
-          `$ids = @(${uniquePids.join(',')}); ` +
-            '$rows = Get-Process -Id $ids -ErrorAction Stop | ForEach-Object { ' +
-            '$command = if ($_.Path) { $_.Path } else { $_.ProcessName }; ' +
-            "[PSCustomObject]@{ pid = $_.Id; startedAt = $_.StartTime.ToUniversalTime().ToString('O'); command = $command } }; " +
+          `$rows = @(Get-CimInstance -ClassName Win32_Process -Filter '${filter}' -ErrorAction Stop | ` +
+            'Where-Object { $_.CreationDate } | ForEach-Object { ' +
+            '$command = if ($_.ExecutablePath) { $_.ExecutablePath } else { $_.Name }; ' +
+            "[PSCustomObject]@{ pid = [int]$_.ProcessId; startedAt = $_.CreationDate.ToUniversalTime().ToString('O'); command = $command } }); " +
             '[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false); ' +
-            '$rows | ConvertTo-Json -Compress',
+            'ConvertTo-Json -InputObject $rows -Compress',
         ],
         {
           maxBuffer: 16_384,
@@ -127,7 +130,7 @@ export async function readProcessIdentities(
 /**
  * Read only OS process start times, for background checks that run off the startup path.
  *
- * Unlike readProcessIdentities, Windows uses `Win32_Process.CreationDate`: `Get-Process`
+ * Windows uses `Win32_Process.CreationDate`: `Get-Process`
  * cannot read `StartTime` of service or elevated processes from a non-elevated caller, and
  * those are exactly the programs that tend to inherit a PID for days. PIDs without a readable
  * start time are absent from the result and must be treated as "unknown".
