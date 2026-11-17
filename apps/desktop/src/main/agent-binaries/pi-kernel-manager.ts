@@ -6,7 +6,10 @@ import { atomicWriteFileSync, readAtomicFileSync } from '../utils/atomicWriteFil
 import { withSecurityBoundaryLock } from '../device-link/crossProcessLock.js';
 import { getBaseUrl, getPlatformKey } from '../manifestService.js';
 import { probeBinaryVersion, isBinaryVersionNotOlder } from './binary-version-probe.js';
-import { installPiBinaryRelease, parsePiRelease, piBinaryUpdateDefaults, piBinaryUpdateError, type PiBinaryRelease } from './pi-self-update.js';
+import { installPiBinaryRelease, parsePiRelease, piBinaryUpdateDefaults, piBinaryUpdateError, piBinaryUpdateFailureStage, type PiBinaryRelease } from './pi-self-update.js';
+import { createLogger } from '../logger.js';
+
+const log = createLogger('pi-kernel-manager');
 
 const VERSION = /^\d+\.\d+\.\d+$/;
 interface Release extends PiBinaryRelease { size?: number; publishedAt?: string; releaseUrl?: string }
@@ -128,7 +131,10 @@ export class PiKernelManager {
         try {
           const release = await this.deps.lookup(source, AbortSignal.timeout(15_000));
           this.checks[source] = { release: project(release), checkedAt: Date.now(), error: false };
-        } catch { this.checks[source] = { ...this.checks[source], error: true }; }
+        } catch (error) {
+          log.warn('Pi release check failed', { source, stage: piBinaryUpdateFailureStage(error) }, error);
+          this.checks[source] = { ...this.checks[source], error: true };
+        }
       }));
       return this.state();
     })();

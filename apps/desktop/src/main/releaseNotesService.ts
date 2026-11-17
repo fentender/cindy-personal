@@ -1,8 +1,8 @@
 /**
  * releaseNotesService.ts
  * ---------------------------------------------------------------------------
- * Fetches per-version release notes from the CDN, plus a version-index so the
- * renderer can show every unread notice at once after a cross-version upgrade.
+ * 获取逐版本公告与历史版本索引，供跨版本升级时展示未读内容。
+ * 个人版使用编译时指定仓库的 GitHub Releases，官方版使用以下 CDN 路径。
  *
  * URL shapes:
  *   per-version:   {CDN_BASE}/notice/{platformKey}/{version}.json
@@ -35,6 +35,7 @@ import {
 } from '../shared/releaseNotesContent';
 
 import { getBaseUrl, getPlatformKey } from './manifestService';
+import { getPersonalReleaseSource } from './personalRelease';
 
 import { createLogger } from './logger';
 
@@ -187,6 +188,67 @@ async function fetchCdnJson<T>(url: string): Promise<T | null> {
   return null;
 }
 
+interface PersonalReleaseNotice {
+  tag_name?: string;
+  name?: string;
+  body?: string;
+  published_at?: string;
+  draft?: boolean;
+  prerelease?: boolean;
+}
+
+function personalReleaseVersion(release: PersonalReleaseNotice): string | null {
+  if (release.draft || release.prerelease || typeof release.tag_name !== 'string') return null;
+  return /^v\d+\.\d+\.\d+$/.test(release.tag_name) ? release.tag_name.slice(1) : null;
+}
+
+// 公告与安装包使用同一编译时仓库；公开说明不要求客户端登录 GitHub。
+async function fetchPersonalReleaseNotes(repository: string, version: string): Promise<RawReleaseNotes | null> {
+  const url = `https://api.github.com/repos/${repository}/releases/tags/${encodeURIComponent(`v${version}`)}`;
+  const release = await fetchCdnJson<PersonalReleaseNotice>(url);
+  if (!release || personalReleaseVersion(release) !== version
+    || typeof release.body !== 'string' || !release.body.trim()
+    || typeof release.published_at !== 'string' || !Number.isFinite(Date.parse(release.published_at))) return null;
+  return {
+    version,
+    date: release.published_at.slice(0, 10),
+    sections: [{
+      title: release.name?.trim() || release.tag_name!,
+      items: [{ name: '', list: release.body.split(/\r?\n/)
+        .map(line => line.replace(/^\s*(?:[-*]\s+|#{1,6}\s+)/, '').trim()).filter(Boolean) }],
+    }],
+  };
+}
+
+let personalIndexInFlight: Promise<string[] | null> | null = null;
+
+async function fetchPersonalReleaseIndex(repository: string): Promise<string[] | null> {
+  if (personalIndexInFlight) return personalIndexInFlight;
+  const task = (async () => {
+    const versions = new Set<string>();
+    // 按页取完再发布索引，避免跨版本升级漏掉较早公告。
+    for (let page = 1; ; page++) {
+      const releases = await fetchCdnJson<PersonalReleaseNotice[]>(
+        `https://api.github.com/repos/${repository}/releases?per_page=30&page=${page}`,
+      );
+      if (!Array.isArray(releases)) return null;
+      for (const release of releases) {
+        const version = release && personalReleaseVersion(release);
+        if (version) versions.add(version);
+      }
+      if (releases.length < 30) break;
+    }
+    return [...versions].sort((a, b) => {
+      const left = a.split('.').map(Number);
+      const right = b.split('.').map(Number);
+      return left[0] - right[0] || left[1] - right[1] || left[2] - right[2];
+    });
+  })();
+  personalIndexInFlight = task;
+  try { return await task; }
+  finally { personalIndexInFlight = null; }
+}
+
 /**
  * Fetch release notes JSON for a given version from CDN.
  * Platform is resolved internally via `getPlatformKey()` (same axis as the
@@ -201,6 +263,12 @@ export async function fetchReleaseNotes(version: string): Promise<RawReleaseNote
   if (pending) return pending;
 
   const request = (async () => {
+    const personal = getPersonalReleaseSource();
+    if (personal) {
+      const notes = await fetchPersonalReleaseNotes(personal.repository, version);
+      if (notes) cache.set(version, notes);
+      return notes;
+    }
     const platform = getPlatformKey();
     // Cache-bust to dodge stale CDN edges
     const url = `${getBaseUrl()}/notice/${platform}/${version}.json?t=${Date.now()}`;
@@ -242,6 +310,13 @@ export async function fetchReleaseNotes(version: string): Promise<RawReleaseNote
  */
 export async function fetchReleaseNotesIndex(): Promise<string[] | null> {
   if (indexCache) return indexCache;
+
+  const personal = getPersonalReleaseSource();
+  if (personal) {
+    const versions = await fetchPersonalReleaseIndex(personal.repository);
+    if (versions) indexCache = versions;
+    return versions;
+  }
 
   const platform = getPlatformKey();
   const url = `${getBaseUrl()}/notice/${platform}/index.json?t=${Date.now()}`;
