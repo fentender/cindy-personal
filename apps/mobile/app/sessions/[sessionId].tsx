@@ -10853,7 +10853,7 @@ function SessionScreenContent({ beforeSessionSwitchRef, newSessionActionRef }: S
               currentSelection: { agentKind: sessionAgentKind, activeModelId: currentSession.model, selectedProviderId: currentSession.providerId ?? null, selectedEffort: currentSession.effort ?? '', selectedFastMode: currentSession.fastMode ?? false,
                     },
               scope: JSON.stringify([auth.user?.id, deviceId, orcaRemoteAgentDeviceId]),
-              agents: sessionAgentSwitchSupported ? ['claude-code','codex','pi'] : [sessionAgentKind],
+              agents: sessionAgentSwitchSupported ? ['claude-code','codex','pi','antigravity'] : [sessionAgentKind],
               loadCapabilities: async (agent) => {
                 const result = normalizeMobileAgentCapabilities(await loadComposerAgentCapabilities(agent));
                 if (!result) throw new Error('Capabilities unavailable');

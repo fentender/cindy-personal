@@ -64,7 +64,7 @@ export class MobileTaskSettings {
           (k) => !['agentKind', 'providerId', 'model', 'agentDeviceId', 'effort', 'fastMode'].includes(k),
         ) ||
         (v.agentDeviceId !== undefined && v.agentDeviceId !== null && !isPluginTaskAgentDeviceId(v.agentDeviceId)) ||
-        !['cc', 'codex', 'pi'].includes(v.agentKind as string) ||
+        !['cc', 'codex', 'pi', 'antigravity'].includes(v.agentKind as string) ||
         typeof v.providerId !== 'string' ||
         typeof v.model !== 'string' ||
         !v.model ||
@@ -88,7 +88,7 @@ export class MobileTaskSettings {
         next.providerId = v.providerId;
         next.model = v.model;
       } else {
-        const agent = v.agentKind === 'cc' ? 'claude-code' : (v.agentKind as 'codex' | 'pi');
+        const agent = v.agentKind === 'cc' ? 'claude-code' : (v.agentKind as 'codex' | 'pi' | 'antigravity');
         if (!(await this.deps.agents()).includes(agent)) throw new Error('PLUGIN_MODEL_UNAVAILABLE');
         const views = await this.deps.providers();
         checkRevision();

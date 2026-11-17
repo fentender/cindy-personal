@@ -146,7 +146,7 @@ export function createBotRemoteEditors(deps: BotRemoteEditorDeps, bind: ReturnTy
           let value: unknown;
           try { value = JSON.parse(string(input.modelChain, 4000)); } catch { fail(); }
           const chain = normalizeBotModelChain(value);
-          if (!Array.isArray(value) || value.length !== 1 || chain.length !== 1 || !['claude', 'codex', 'pi'].includes(value[0]?.harness)) fail();
+          if (!Array.isArray(value) || value.length !== 1 || chain.length !== 1 || !['claude', 'codex', 'pi', 'antigravity'].includes(value[0]?.harness)) fail();
           capabilities = { modelChainOverride: chain };
         }
         await deps.create({ id: botId, name, avatarImageBase64, locale, ...(capabilities ? { capabilities } : {}) });

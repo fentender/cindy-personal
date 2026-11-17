@@ -226,7 +226,7 @@ export function createBotRemoteSettingsResource(deps: BotRemoteSettingsDeps) {
         let value: unknown;
         try { value = JSON.parse(string('modelChain')); } catch { throwIpcError('INVALID_PARAMS', 'Invalid model chain'); }
         chain = normalizeBotModelChain(value);
-        if (!Array.isArray(value) || !chain.length || chain.length !== value.length || value.some(route => !['claude', 'codex', 'pi'].includes(route?.harness))) throwIpcError('INVALID_PARAMS', 'Invalid model chain');
+        if (!Array.isArray(value) || !chain.length || chain.length !== value.length || value.some(route => !['claude', 'codex', 'pi', 'antigravity'].includes(route?.harness))) throwIpcError('INVALID_PARAMS', 'Invalid model chain');
       }
       // The retired task model fields (`taskFollowsPrimary`, `taskModel`) of an older controller are
       // accepted and ignored; sent alone they change nothing and are refused as an empty change.

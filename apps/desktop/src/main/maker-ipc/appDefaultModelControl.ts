@@ -43,7 +43,7 @@ export function availableAppDefaultModels(input: {
   const current = resolveAvailableLocalRoute({ providers: input.providers, providersLoading: false,
     availableAgents: input.availableAgents, availableAgentsLoaded: true,
     preferredRoute: input.currentRoute ?? undefined, isModelEnabled: input.enabled });
-  return input.providers.flatMap(provider => (['claude-code', 'codex', 'pi'] as const).flatMap(agent =>
+  return input.providers.flatMap(provider => (['claude-code', 'codex', 'pi', 'antigravity'] as const).flatMap(agent =>
     (provider.models[agent] ?? []).flatMap(model => {
       const remembered = input.tuning?.(agent, provider.id, model.id);
       const route: BotModelRoute = { harness: agent === 'claude-code' ? 'claude' : agent,

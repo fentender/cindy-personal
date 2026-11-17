@@ -67,7 +67,7 @@ export interface ResolvedHookSessionConfig {
   providerId: string | null;
 }
 
-const AGENT_KINDS = new Set(['claude-code', 'codex', 'pi']);
+const AGENT_KINDS = new Set(['claude-code', 'codex', 'pi', 'antigravity']);
 
 /**
  * 合成新 hook 会话的 agent/model/effort。

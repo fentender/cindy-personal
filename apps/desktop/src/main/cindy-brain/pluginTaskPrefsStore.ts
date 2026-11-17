@@ -49,7 +49,7 @@ export async function relocateGhostErrandPrefs(from: string, to: string): Promis
 }
 
 /** 插件任务可选的 agent 种类(与 sessions.agent_kind 同词汇表)。 */
-export const PLUGIN_TASK_AGENT_KINDS = ['cc', 'codex', 'pi'] as const;
+export const PLUGIN_TASK_AGENT_KINDS = ['cc', 'codex', 'pi', 'antigravity'] as const;
 export type PluginTaskAgentKind = (typeof PLUGIN_TASK_AGENT_KINDS)[number];
 
 /** 插件任务可选的思考强度(与 worker 同集合;包含 minimal)。 */

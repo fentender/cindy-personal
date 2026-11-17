@@ -44,10 +44,10 @@ export interface ImDefaultRouteRecord {
   manual?: true;
 }
 
-const AGENT_KINDS: readonly AgentKind[] = ['claude-code', 'codex', 'pi'];
+const AGENT_KINDS: readonly AgentKind[] = ['claude-code', 'codex', 'pi', 'antigravity'];
 
 /**
- * 渠道原始设置里影响路由的部分。三个引擎都算进去: 选定引擎的模型全被停用时
+ * 渠道原始设置里影响路由的部分。所有引擎都算进去: 选定引擎的模型全被停用时
  * 解析会回落到别的引擎, 那边的设置同样决定落点。权限档不在内 —— 它不跟随。
  */
 export function fingerprintImDefaultSettings(raw: ImDefaultSettings): string {

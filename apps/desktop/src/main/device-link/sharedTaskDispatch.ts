@@ -270,7 +270,7 @@ export function assertSharedTaskInvoke(
   // response goes through dispatch's normal credential-free projection.
   if (channel === 'maker:get-capabilities' || channel === 'maker:provider:list') {
     if (args.length > 1 || !capture.authorize('history.read')) deny();
-    if (channel === 'maker:get-capabilities' && !['claude-code', 'codex', 'pi'].includes(String(args[0]))) deny();
+    if (channel === 'maker:get-capabilities' && !['claude-code', 'codex', 'pi', 'antigravity'].includes(String(args[0]))) deny();
     if (channel === 'maker:provider:list' && args[0] !== undefined) {
       const options = record(args[0]);
       if (!options || Object.keys(options).some((key) => key !== 'capabilities') ||

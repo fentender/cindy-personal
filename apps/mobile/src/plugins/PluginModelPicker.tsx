@@ -124,7 +124,7 @@ export function PluginModelPicker({
       unified={{
         preferenceScope: "request",
         scope: JSON.stringify([owner.accountKey, deviceId]),
-        agents: ["claude-code", "codex", "pi"],
+        agents: ["claude-code", "codex", "pi", "antigravity"],
         loadCapabilities: async (kind) => {
           const result = normalizeMobileAgentCapabilities(
             await maker.getCapabilities(kind),

@@ -224,7 +224,7 @@ export function validateCindyMakeTaskStart(raw: unknown): CindyMakeTaskStart {
       const valid =
         value === undefined ||
         (key === 'agentKind'
-          ? typeof value === 'string' && ['cc', 'codex', 'pi'].includes(value)
+          ? typeof value === 'string' && ['cc', 'codex', 'pi', 'antigravity'].includes(value)
           : key === 'fastMode' || key === 'planModeEnabled'
             ? typeof value === 'boolean'
             : key === 'providerId' && value === null

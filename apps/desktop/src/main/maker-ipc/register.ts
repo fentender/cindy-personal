@@ -14404,7 +14404,7 @@ export function registerMakerIpc(maker: Maker, options: RegisterMakerIpcOptions)
         assertCurrent();
         const [row] = await snapshot.client.drizzle.select().from(sessions).where(eq(sessions.id, taskId)).limit(1);
         assertCurrent();
-        if (!row || row.source !== 'plugin' || row.remoteHostId || (row.orcaRole && row.orcaRole !== 'lead') || !['cc', 'codex', 'pi'].includes(row.agentKind)) return null;
+        if (!row || row.source !== 'plugin' || row.remoteHostId || (row.orcaRole && row.orcaRole !== 'lead') || !['cc', 'codex', 'pi', 'antigravity'].includes(row.agentKind)) return null;
         const runtime = await readSessionRuntimeProfiles(taskId);
         assertCurrent();
         // A queued input will execute the accepted next-send route. Keep its
