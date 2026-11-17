@@ -26,6 +26,10 @@ export class AntigravityTranslator {
 
   constructor(private readonly cwd: string, private readonly emit: (event: AgentEvent) => void) {}
 
+  isTurnRunning(): boolean {
+    return this.active;
+  }
+
   beginTurn(model: string): void {
     if (this.active) throw new Error('Antigravity turn is already active');
     this.active = true;
@@ -40,6 +44,7 @@ export class AntigravityTranslator {
     this.edits.clear();
     this.completeDiff = true;
     this.usage = { ...this.usage, tokenUsage: 0, outputTokens: 0 };
+    this.emit({ type: 'status', data: { status: 'Working', ...this.snapshot(), isRunning: true } });
   }
 
   update(update: SessionUpdate): void {

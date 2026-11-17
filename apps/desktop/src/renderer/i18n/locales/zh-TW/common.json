@@ -14222,6 +14222,7 @@
         "openSettings": "前往設定"
       },
       "permissionSwitchFailed": "權限模式切換失敗，已保留原設定",
+      "permissionSwitchBusy": "Antigravity 正忙，請等執行結束後再切換權限模式，已保留原設定",
       "retryPluginWriteAccess": "重新確認插件寫入權限",
       "fullAccessConfirmation": {
         "title": "開啟完全存取？",

@@ -14392,6 +14392,7 @@
         "openSettings": "Ouvrir les paramètres"
       },
       "permissionSwitchFailed": "Échec du changement de mode d'autorisation ; le paramètre précédent a été conservé",
+      "permissionSwitchBusy": "Antigravity est occupé. Attendez la fin de l’exécution avant de changer le mode d’autorisation ; le réglage précédent a été conservé.",
       "retryPluginWriteAccess": "Confirmer à nouveau l'autorisation d'écriture du plugin",
       "fullAccessConfirmation": {
         "title": "Activer l'accès complet ?",

@@ -14222,6 +14222,7 @@
         "openSettings": "往規制"
       },
       "permissionSwitchFailed": "權柄模式切換未成，原設仍留",
+      "permissionSwitchBusy": "Antigravity 正忙，請等執行結束後再切換權限模式，已保留原設定",
       "retryPluginWriteAccess": "重確認法器寫入權柄",
       "fullAccessConfirmation": {
         "title": "開 Full access？",

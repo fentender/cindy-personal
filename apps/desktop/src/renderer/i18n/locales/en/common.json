@@ -14276,6 +14276,7 @@
         "openSettings": "Open Settings"
       },
       "permissionSwitchFailed": "Permission mode change failed; the previous setting was kept",
+      "permissionSwitchBusy": "Antigravity is busy. Wait until it finishes before changing permission mode; the previous setting was kept.",
       "retryPluginWriteAccess": "Confirm plugin write permission again",
       "fullAccessConfirmation": {
         "title": "Enable Full access?",

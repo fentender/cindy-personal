@@ -9300,7 +9300,9 @@ export function ChatInput({
         onPermissionModeDidChange?.(newMode);
       } catch (err) {
         log.warn('permission change failed:', err);
-        toast.error(t('newChat.chatInput.permissionSwitchFailed'));
+        // 远程 IPC 会在错误正文前加调用路径，保留原生忙碌原因的识别。
+        const busy = err instanceof Error && err.message.includes('Antigravity session is busy');
+        toast.error(t(busy ? 'newChat.chatInput.permissionSwitchBusy' : 'newChat.chatInput.permissionSwitchFailed'));
       }
     },
     [sessionId, onPermissionModeDidChange, t, confirmDialog, settingsLocked],

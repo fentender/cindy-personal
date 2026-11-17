@@ -14392,6 +14392,7 @@
         "openSettings": "Abrir definições"
       },
       "permissionSwitchFailed": "Falha ao alterar o modo de permissões; a definição anterior foi mantida",
+      "permissionSwitchBusy": "O Antigravity está ocupado. Aguarde a conclusão antes de alterar o modo de permissão; a definição anterior foi mantida.",
       "retryPluginWriteAccess": "Confirmar novamente a permissão de escrita do plugin",
       "fullAccessConfirmation": {
         "title": "Ativar o acesso total?",

@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { AgentDeps, StartSessionOptions } from '../base-agent.js';
+import { createConsoleLogger } from '../../interfaces/logger.js';
 import { AntigravityManagedSkills } from './managed-skills.js';
 
 describe('Antigravity managed Skill projection', () => {
@@ -14,13 +15,20 @@ describe('Antigravity managed Skill projection', () => {
       await fs.mkdir(directory);
       await fs.writeFile(path.join(directory, 'SKILL.md'), `---\nname: ${path.basename(directory)}\ndescription: fixture\n---\ninitial`);
     }
-    const deps = {
+    const deps: AgentDeps = {
+      binaryPath: '/native/agy', logger: createConsoleLogger('test'), runtimeConfig: {},
+      auth: { getState: async () => ({ authenticated: true }), getAuthEnv: async () => ({}),
+        triggerLogin: async () => ({ authenticated: true }), logout: async () => {} },
       getDisabledSkillPaths: () => [own],
       getManagedSkills: async () => [{ kind: 'agent-skill', name: 'external', path: path.join(external, 'SKILL.md'),
         source: 'skill', scope: 'user', claudeCommandName: 'fixture:external' }],
-    } as AgentDeps;
-    const options = { botRuntimeProfile: { skillPolicy: { mode: 'allowlist', configured: [], catalog: [],
-      ownSkills: [{ name: 'own', path: own }] } } } as StartSessionOptions;
+    };
+    const options: StartSessionOptions = { workingDir: root, model: 'gemini-4-argon',
+      botRuntimeProfile: { botId: 'fixture', profileVersion: 1,
+        mcpPolicy: { mode: 'inherit', configured: [], catalog: [] },
+        toolsetPolicy: { mode: 'inherit', configured: [], catalog: [] },
+        skillPolicy: { mode: 'allowlist', configured: [], catalog: [],
+          ownSkills: [{ name: 'own', path: own }] } } };
     const projection = await AntigravityManagedSkills.create(deps, options);
     try {
       const mounted = path.join(projection!.directory, '.agents', 'skills');

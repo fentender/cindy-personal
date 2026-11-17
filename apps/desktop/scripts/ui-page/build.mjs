@@ -222,19 +222,20 @@ function eagerGlobModules(overlay) {
         const imports = [];
         const watchDirs = [];
         contents = contents.replace(
-          /import\.meta\.glob(?:<\w+>)?\(\s*(['"])(\.\/[^'"]+)\1\s*,\s*\{\s*eager:\s*true,\s*import:\s*(['"])default\3\s*,?\s*\}\s*\)/g,
-          (_, _quote, pattern) => {
-            const matches = picomatch(pattern.slice(2));
+          /import\.meta\.glob(?:<\w+>)?\(\s*(['"])(\.\.?\/[^'"]+)\1\s*,\s*\{\s*eager:\s*true,\s*(?:query:\s*(['"])(\?url)\3\s*,\s*)?import:\s*(['"])default\5\s*,?\s*\}\s*\)/g,
+          (_, _quote, pattern, _queryQuote, query = '') => {
+            const matches = picomatch(pattern.replace(/^\.\//, ''));
             const files = overlay?.atRef
               ? [...overlay.atRef].filter(candidate => matches(path.relative(dir, candidate).split(path.sep).join('/')))
               : globSync(pattern, { cwd: dir }).map(candidate => path.resolve(dir, candidate));
             watchDirs.push(dir);
             return `{${files.sort().map(candidate => {
-              const key = './' + path.relative(dir, candidate).split(path.sep).join('/');
+              const relative = path.relative(dir, candidate).split(path.sep).join('/');
+              const key = relative.startsWith('../') ? relative : './' + relative;
               const binding = `__ui_eager_glob_${imports.length}`;
               // Relative imports pass through the revision overlay's resolver,
               // including modules that no longer exist in the current worktree.
-              imports.push(`import ${binding} from ${JSON.stringify(key)};`);
+              imports.push(`import ${binding} from ${JSON.stringify(key + query)};`);
               return `${JSON.stringify(key)}: ${binding}`;
             }).join(',')}}`;
           },

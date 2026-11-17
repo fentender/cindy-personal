@@ -14276,6 +14276,7 @@
         "openSettings": "Einstellungen öffnen"
       },
       "permissionSwitchFailed": "Berechtigungsmodus konnte nicht geändert werden; die bisherige Einstellung wurde beibehalten",
+      "permissionSwitchBusy": "Antigravity ist beschäftigt. Warte, bis die Ausführung beendet ist, bevor du den Berechtigungsmodus änderst. Die bisherige Einstellung wurde beibehalten.",
       "retryPluginWriteAccess": "Schreibberechtigung für Plugin erneut bestätigen",
       "fullAccessConfirmation": {
         "title": "Vollzugriff aktivieren?",

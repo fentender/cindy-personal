@@ -14392,6 +14392,7 @@
         "openSettings": "Abrir configuración"
       },
       "permissionSwitchFailed": "Falló el cambio de modo de permisos; se conservó la configuración anterior",
+      "permissionSwitchBusy": "Antigravity está ocupado. Espera a que termine antes de cambiar el modo de permisos; se ha conservado la configuración anterior.",
       "retryPluginWriteAccess": "Confirma de nuevo el permiso de escritura del complemento",
       "fullAccessConfirmation": {
         "title": "¿Habilitar acceso completo?",

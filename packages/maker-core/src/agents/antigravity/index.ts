@@ -184,6 +184,7 @@ export class AntigravityAgent extends BaseAgent {
         get disabledSkillPaths() { return skills?.disabledPaths; },
         events: () => queue, getUsageSnapshot: () => translator.snapshot(),
         setInteractionResolver: next => { resolver = next; },
+        isTurnRunning: () => preparing !== undefined || translator.isTurnRunning(),
         hasPendingHostOperation: () => preparing !== undefined || connection.busy,
         // 尚无原生后台任务枚举，不能根据当前轮次空闲误回收它们。
         hasLiveBackgroundWork: async () => true,

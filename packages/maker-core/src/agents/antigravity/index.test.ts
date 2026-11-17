@@ -196,7 +196,7 @@ describe('Antigravity Agent adapter', () => {
 
   it('cancels attachment preparation and rejects a concurrent send before native dispatch', async () => {
     const s = setup({ images: true });
-    const read = deferred<Buffer>();
+    const read = deferred<Buffer<ArrayBuffer>>();
     vi.spyOn(fs, 'readFile').mockReturnValue(read.promise);
     const handle = await s.adapter.startSession({ workingDir: '/workspace', model: 'gemini-4-argon', resumeSessionId: 'previous-native' });
     const first = handle.send({ type: 'user', content: [{ type: 'image', path: 'screen.png', mimeType: 'image/png' }] });
@@ -256,9 +256,12 @@ describe('Antigravity Agent adapter', () => {
     expect(request._meta).toMatchObject({ antigravity: { systemPrompt: { append: expect.stringContaining('Existing task instructions') } } });
     const events = handle.events()[Symbol.asyncIterator]();
     await handle.send({ type: 'user', content: 'Continue' });
+    expect(handle.isTurnRunning?.()).toBe(true);
+    expect((await events.next()).value).toMatchObject({ type: 'status', source: 'antigravity', data: { isRunning: true } });
     expect((await events.next()).value).toMatchObject({ type: 'text', source: 'antigravity', data: { text: 'Continued' } });
     s.response.resolve({ stopReason: 'end_turn' });
     expect((await events.next()).value).toMatchObject({ type: 'done', source: 'antigravity' });
+    expect(handle.isTurnRunning?.()).toBe(false);
     const closing = handle.close();
     await s.closeRequested.promise;
     expect(s.dispose).not.toHaveBeenCalled();
@@ -302,9 +305,11 @@ describe('Antigravity Agent adapter', () => {
     const handle = await s.adapter.startSession({ workingDir: '/workspace', model: 'gemini-4-argon', resumeSessionId: 'previous-native' });
     const events = handle.events()[Symbol.asyncIterator]();
     await handle.send({ type: 'user', content: 'Continue' });
+    expect((await events.next()).value).toMatchObject({ type: 'status', data: { isRunning: true } });
     await events.next();
     s.stopped.resolve();
     expect((await events.next()).value).toMatchObject({ type: 'error', data: { isTerminal: true } });
+    expect(handle.isTurnRunning?.()).toBe(false);
     expect((await events.next()).done).toBe(true);
   });
 
