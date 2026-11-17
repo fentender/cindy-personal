@@ -536,8 +536,8 @@ describe('model price override sparse persistence', () => {
     ).toEqual({ version: 1, entries: {} });
   });
 
-  it('reloads a persisted Pi override instead of discarding it after restart', () => {
-    const target = { providerId: 'custom-pi', agent: 'pi' as const, modelId: 'grok-4' };
+  it.each(['pi', 'antigravity'] as const)('reloads a persisted %s override instead of discarding it after restart', (agent) => {
+    const target = { providerId: 'custom-' + agent, agent, modelId: 'model' };
     const key = __testing.overrideKey(target);
     expect(
       __testing.normalize({

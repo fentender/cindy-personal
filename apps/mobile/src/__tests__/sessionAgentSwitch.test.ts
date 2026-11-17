@@ -62,6 +62,18 @@ describe('mobile session Agent switch contract', () => {
     })).toEqual({ targetAgentKind: 'pi', model: 'gpt-5.5', providerId: 'openai' });
   });
 
+  it('preserves the native Antigravity engine and its pending switch', () => {
+    const intent = {
+      targetAgentKind: 'antigravity', model: 'gemini-4-argon',
+      providerId: 'antigravity', effort: 'high', agentDeviceId: 'execution-computer',
+    };
+    expect(normalizeSessionAgentSwitchIntent(intent)).toEqual(intent);
+    expect(sessionAgentKind({ agentKind: 'antigravity' })).toBe('antigravity');
+    expect(mobileAgentLabel('antigravity')).toBe('Antigravity');
+    expect(mobileAgentLabelFromUnknown('antigravity')).toBe('Antigravity');
+    expect(mobileAgentVendor('antigravity')).toBe('antigravity');
+  });
+
   it('requires host capability, allows Orca, and excludes SSH sessions', () => {
     const supported: MobileAgentCapabilities = {
       availableModels: [],

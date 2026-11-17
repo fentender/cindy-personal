@@ -71,7 +71,7 @@ function comparisonWindow(model: CatalogModel): number {
     ? 1_000_000 : model.contextWindow;
 }
 
-const AGENTS: readonly AgentKind[] = ['claude-code', 'codex', 'pi'];
+const AGENTS: readonly AgentKind[] = ['claude-code', 'codex', 'pi', 'antigravity'];
 
 function normalizedUrl(value: string): string | undefined {
   try {
@@ -101,7 +101,7 @@ function routeMatches(
   evidence: SelectionAliasEvidence,
 ): boolean {
   const runtime = provider.routing[agent];
-  if (!runtime || runtime.disabled || runtime.modelIdRewrite) return false;
+  if (!runtime || runtime.transport === 'acp' || runtime.disabled || runtime.modelIdRewrite) return false;
   const baseUrl = normalizedUrl(model.route?.baseUrl ?? runtime.upstream);
   const protocol = model.route?.wireProtocol ?? runtime.wireProtocol ?? defaultWireProtocol(agent);
   const declaredApis = agent === 'pi' ? [model.api, model.piApi] : [model.api];

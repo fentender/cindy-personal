@@ -105,7 +105,7 @@ const LOCAL_WORKER_MODEL_MEMORY = {
 
 export interface CreateWorkerForm {
   role: string;
-  agent: 'claude-code' | 'codex' | 'pi';
+  agent: 'claude-code' | 'codex' | 'pi' | 'antigravity';
   model: string;
   effort?: Effort;
   fast?: boolean | 'ultrafast';
@@ -231,7 +231,7 @@ export function CreateWorkerPopover({
     memory: 'host' | 'controller' | 'none';
   } | null>(null);
   const [remoteRolesRequest, setRemoteRolesRequest] = useState(0);
-  const [agent, setAgent] = useState<'claude-code' | 'codex' | 'pi'>('codex');
+  const [agent, setAgent] = useState<'claude-code' | 'codex' | 'pi' | 'antigravity'>('codex');
   const [model, setModel] = useState(DEFAULT_WORKER_CREATION_PREFS.codex.model);
   const [modelPickerOpenRequest, setModelPickerOpenRequest] = useState(0);
   const modelPickerRequestSequence = useRef(0);
@@ -650,7 +650,7 @@ export function CreateWorkerPopover({
 
   const vendorKey = agentKindToVendor(agent);
   const updateAgent = useCallback(
-    (nextAgent: 'claude-code' | 'codex' | 'pi') => {
+    (nextAgent: 'claude-code' | 'codex' | 'pi' | 'antigravity') => {
       if (nextAgent === agent) return;
       modelSelectionChosenRef.current = true;
       restoredModelSelectionRef.current = false;

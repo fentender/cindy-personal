@@ -538,7 +538,7 @@ export function gatewayDefaultRouteDecision(
   if (!getAppCapabilities().canUseCindyGateway) return null;
   const xd = getActiveCatalog().providers.find((p) => p.id === 'xd');
   const routing = xd?.routing[agent];
-  if (!routing) return null;
+  if (!routing || routing.transport === 'acp') return null;
   return buildRouteDecision(routing, gatewayKey, agent);
 }
 
@@ -574,7 +574,7 @@ export function providerRoutingForModel(
   wireModel: string | undefined,
 ): RoutingDescriptor | null {
   const routing = provider.routing[agent];
-  if (!routing) return null;
+  if (!routing || routing.transport === 'acp') return null;
   const model = wireModel
     ? provider.models[agent]?.find((candidate) => candidate.id === wireModel)
     : undefined;
@@ -1180,7 +1180,7 @@ export function resolveImplicitProviderOAuthRouteDecision(
 ): RoutingDecision | null | Promise<RoutingDecision | null> {
   const provider = uniqueProviderForModel(modelId, agent);
   const routing = provider?.routing[agent];
-  if (!provider || !routing || routing.authStrategy !== 'provider-oauth-header') return null;
+  if (!provider || !routing || routing.transport === 'acp' || routing.authStrategy !== 'provider-oauth-header') return null;
   const apiKey = isCustomRoutedProvider(provider) ? customProviderKeyReader(provider.id, agent) : null;
   const withRequestPath = (decision: RoutingDecision | null): RoutingDecision | null =>
     decision && routing.requestPath ? { ...decision, pathOverride: routing.requestPath } : decision;
@@ -1204,7 +1204,7 @@ export function resolveProviderOAuthControlRouteDecision(
     return (
       !isProviderRouteMutationInProgress(provider.id) &&
       provider.agents.includes(agent) &&
-      routing?.authStrategy === 'provider-oauth-header' &&
+      routing?.transport !== 'acp' && routing?.authStrategy === 'provider-oauth-header' &&
       // Session-less Codex control requests use the OpenAI control-plane
       // protocol. Local inference bridges (Chat / Anthropic Messages) obtain
       // their model lists through Cindy's provider discovery and must not
@@ -1215,7 +1215,7 @@ export function resolveProviderOAuthControlRouteDecision(
   if (providers.length !== 1) return null;
   const provider = providers[0];
   const routing = provider.routing[agent];
-  if (!routing) return null;
+  if (!routing || routing.transport === 'acp') return null;
   const apiKey = isCustomRoutedProvider(provider) ? customProviderKeyReader(provider.id, agent) : null;
   return Promise.resolve(providerOAuthTokenReader(provider.id, agent))
     .then((token) => buildRouteDecision(routing, gatewayKey, agent, apiKey, token))

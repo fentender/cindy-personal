@@ -17,12 +17,14 @@ import type {
 import { shouldPruneSkillScanDirectory } from './skill-scan-limits.js';
 
 export interface SourceDef {
-  engine: 'claude-code' | 'codex' | 'pi';
+  engine: AgentCustomization['engine'];
   kind: 'skill' | 'command' | 'agent';
   scope: string;
   dir: string;
   workingDir?: string;
   runtimeStatus?: AgentCustomization['runtimeStatus'];
+  /** 原生扫描深度；默认同时发现一层命名空间，Antigravity 只扫描直接子项。 */
+  skillScanDepth?: 1 | 2;
   /** Optional physical root that the skill source, folder, and SKILL.md must stay inside. */
   skillContainWithin?: string;
 }
@@ -210,6 +212,8 @@ function scanSkillFolders(
       // A skill's child directories are resources, not discoverable skills.
       continue;
     }
+
+    if (source.skillScanDepth === 1) continue;
 
     // Dirent can report a Windows junction as a directory; lstat keeps the
     // no-recursive-symlink guarantee consistent across platforms.

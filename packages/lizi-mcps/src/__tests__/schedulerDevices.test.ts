@@ -534,7 +534,7 @@ describe('remote schedule create', () => {
     return { registry, invoke, scheduler };
   }
 
-  it('creates on the named computer and does not touch the local scheduler', async () => {
+  it.each(['pi', 'antigravity'] as const)('creates %s on the named computer and does not touch the local scheduler', async (agentKind) => {
     const s = setup();
     const result = parse(await s.registry.call('schedule_create', {
       device: 'spark',
@@ -543,7 +543,7 @@ describe('remote schedule create', () => {
       cronExpr: '0 9 * * 1-5',
       timezone: 'Asia/Shanghai',
       recurring: true,
-      agentKind: 'pi',
+      agentKind,
       model: 'grok-4.6',
       providerId: 'xai-2fdb5bc7',
       useWorktree: false,
@@ -553,6 +553,7 @@ describe('remote schedule create', () => {
     expect(s.invoke).toHaveBeenCalledWith('spark', 'create', [expect.objectContaining({
       name: '游戏领域雷达',
       providerId: 'xai-2fdb5bc7',
+      agentKind,
     })]);
     expect(s.scheduler.create).not.toHaveBeenCalled();
   });

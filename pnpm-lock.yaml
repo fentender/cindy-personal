@@ -1457,6 +1457,9 @@ importers:
 
   packages/maker-core:
     dependencies:
+      '@agentclientprotocol/sdk':
+        specifier: 2.7.0
+        version: 2.7.0(zod@4.3.6)
       '@anthropic-ai/claude-agent-sdk':
         specifier: 0.3.321
         version: 0.3.321(@anthropic-ai/sdk@0.93.0(zod@4.3.6))(@modelcontextprotocol/sdk@1.29.0(zod@4.3.6))(zod@4.3.6)
@@ -1885,6 +1888,15 @@ importers:
         version: 3.2.7(@types/debug@4.1.13)(@types/node@25.9.5)(jiti@2.7.0)(jsdom@29.1.1(@noble/hashes@1.8.0))(lightningcss@1.33.0)(terser@5.49.0)(tsx@4.23.1)(yaml@2.9.0)
 
 packages:
+
+  '@agentclientprotocol/sdk@2.7.0':
+    resolution: {integrity: sha512-oXdQq0plWv3iOg01zJghNZRSuyWeMYxOgWIaSdwg1BZe2ZAC9LRhNDi023lNYxXq1zVIpQjIp8P6AfsxpvxF6g==}
+    peerDependencies:
+      '@modelcontextprotocol/server': ^2.4.0
+      zod: 4.3.6
+    peerDependenciesMeta:
+      '@modelcontextprotocol/server':
+        optional: true
 
   2g@1.0.1:
     resolution: {integrity: sha512-+uViadKOS/wwR4pFu5g8TPn3QHpKqoX19JHCnp8k/3cLpImdcXozwvZA6Q/5PeW3AcU8neL8faaMidBcv7o8CA==}
@@ -12102,6 +12114,10 @@ packages:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
 
 snapshots:
+
+  '@agentclientprotocol/sdk@2.7.0(zod@4.3.6)':
+    dependencies:
+      zod: 4.3.6
 
   2g@1.0.1(typescript@6.0.3):
     optionalDependencies:

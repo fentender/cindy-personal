@@ -404,10 +404,21 @@ export function createAgentRuntimeConfigs(ports: AgentRuntimeConfigPorts) {
     };
   }
 
+  function buildAntigravityRuntimeConfig(): AgentRuntimeConfig {
+    return {
+      systemPrompt: [hostSystemPrompt, businessOwnershipPrompt].map(text => text.trim()).join('\n\n'),
+      answerDeliveryPrompt: ANSWER_DELIVERY_PROMPT,
+      taskShellEnv: inputHandoffTaskShellEnv,
+      userDataPath: ports.userDataPath(),
+      get makerMemoryEnabled() { return readMakerMemoryEnabled(); },
+    };
+  }
+
   return {
     getRipgrepBinaryPath,
     ensureBundledRipgrepReady,
     buildClaudeRuntimeConfig,
     buildCodexRuntimeConfig,
+    buildAntigravityRuntimeConfig,
   };
 }

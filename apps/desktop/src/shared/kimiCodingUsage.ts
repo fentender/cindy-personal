@@ -39,7 +39,7 @@ export function isKimiCodingProvider(
   )
     return false;
   return (agent ? [provider.routing?.[agent]] : Object.values(provider.routing ?? {})).some(
-    (route) => route && !route.disabled && kimiCodingUsageEndpoint(route.upstream),
+    (route) => route && route.transport !== 'acp' && !route.disabled && kimiCodingUsageEndpoint(route.upstream),
   );
 }
 

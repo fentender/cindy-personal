@@ -8,7 +8,7 @@ const caller = { agentKind: 'codex' as const, model: 'gpt-6-astra', providerId: 
 const panel = { agentKind: 'pi' as const, model: 'z-ai/glm-5.3-flash', providerId: 'xd', effort: 'medium' as const, fastMode: false };
 const metadata = (id: string) => ({ id, efforts: ['medium', 'high'], defaultEffort: 'medium', supportsFastMode: false });
 const routing = {
-  availability: {
+  availability: { antigravity: [],
     codex: [{ id: 'openai', name: 'OpenAI', models: [caller.model] }],
     pi: [{ id: 'xd', name: 'Cindy AI', models: [panel.model] }],
     'claude-code': [{ id: 'xd', name: 'Cindy AI', models: [panel.model] }, { id: 'glm', name: 'GLM', models: ['glm-5.3'] }],
@@ -45,6 +45,20 @@ describe('ordinary Session model selection', () => {
   it('preserves a user-repaired existing task across default-model changes', async () => {
     const { deps, resolve } = setup();
     expect(await resolve({}, undefined, caller)).toEqual(caller);
+    expect(deps.readDefault).not.toHaveBeenCalled();
+  });
+  // unit：原生引擎任务再次打开时必须保留已选路线，不能落回面板的 Pi 默认值。
+  it('resumes an existing native Antigravity route using its discovered model', async () => {
+    const native = { ...caller, agentKind: 'antigravity' as const, providerId: 'antigravity', model: 'native-model' };
+    const { deps, resolve } = setup({
+      availableAgents: () => ['antigravity'],
+      availableModels: () => [metadata(native.model)],
+      readProviderRouting: async () => ({
+        ...routing,
+        availability: { ...routing.availability, antigravity: [{ id: 'antigravity', name: 'Antigravity', models: [native.model] }] },
+      }),
+    });
+    await expect(resolve({}, undefined, native)).resolves.toEqual(native);
     expect(deps.readDefault).not.toHaveBeenCalled();
   });
   it('does not treat a valid GLM catalog model as invalid because SDK logs add a wire suffix', async () => {

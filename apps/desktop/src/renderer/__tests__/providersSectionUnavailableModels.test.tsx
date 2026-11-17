@@ -282,6 +282,29 @@ afterEach(() => {
 });
 
 describe('ProvidersSection — 双栏管理', () => {
+  it('connects and disconnects the native Antigravity subscription through the agent auth boundary', async () => {
+    providerSnapshotState.customOverride = {
+      id: 'antigravity', name: 'Antigravity', source: 'builtin', agents: ['antigravity'],
+      auth: { method: 'oauth' }, routing: { antigravity: { transport: 'acp', authStrategy: 'oauth-passthrough' } },
+      models: { antigravity: [] }, connected: false, removed: false,
+    };
+    providerSnapshotState.order = ['antigravity', 'xd'];
+    const triggerLogin = vi.fn(async () => ({ authenticated: true }));
+    const logout = vi.fn(async () => undefined);
+    window.electronAPI.maker.auth = { ...window.electronAPI.maker.auth, triggerLogin, logout, cancelLogin: vi.fn(async () => undefined) };
+    window.electronAPI.maker.setProviderPresentation = vi.fn(async () => undefined);
+    const view = render(<MemoryRouter><ProvidersSection /></MemoryRouter>);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'settings.providers.button.authorize' }));
+    await waitFor(() => expect(triggerLogin).toHaveBeenCalledWith('antigravity', { ownerId: expect.any(String) }));
+    await waitFor(() => expect(refetchProvidersSpy).toHaveBeenCalled());
+    providerSnapshotState.customOverride!.connected = true;
+    view.rerender(<MemoryRouter><ProvidersSection /></MemoryRouter>);
+    confirmSpy.mockResolvedValueOnce(true);
+    fireEvent.click(await screen.findByRole('button', { name: 'settings.providers.button.disconnect' }));
+    await waitFor(() => expect(logout).toHaveBeenCalledWith('antigravity', { providers: [] }));
+  });
+
   // Reuse receiver-side disable, retaining the settings row for re-enabling.
   it('disables an extra remote provider and re-enables it from the same action menu after reopening', async () => {
     ownDevicesState.devices = [{ deviceId: 'peer', name: 'Other computer', platform: 'darwin' }];

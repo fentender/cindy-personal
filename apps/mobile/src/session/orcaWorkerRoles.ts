@@ -71,17 +71,22 @@ export function orcaPrefsFromHostDefaults(
   taskHostDeviceId: string | null | undefined,
 ): OrcaWorkerCreationPrefs {
   if (!defaults) return defaultOrcaWorkerCreationPrefs();
-  const agent = (kind: OrcaWorkerDefaults['agent']) => ({
-    model: defaults.agents[kind].model,
-    effort: defaults.agents[kind].effort || DEFAULT_ORCA_WORKER_EFFORT,
-    fast: defaults.agents[kind].fast,
-    // 那台电脑记的来源要带着走：同一个模型在多个来源下，不能悄悄换成别的来源运行。
-    providerId: defaults.agents[kind].providerId,
-  });
+  const agent = (kind: OrcaWorkerDefaults['agent']) => {
+    // 旧版电脑不返回第四引擎的偏好；沿用表单已有的首次默认值。
+    const saved = defaults.agents[kind];
+    if (!saved) return defaultOrcaWorkerCreationPrefs().agents[kind];
+    return {
+      model: saved.model,
+      effort: saved.effort || DEFAULT_ORCA_WORKER_EFFORT,
+      fast: saved.fast,
+      // 那台电脑记的来源要带着走：同一个模型在多个来源下，不能悄悄换成别的来源运行。
+      providerId: saved.providerId,
+    };
+  };
   const route = defaults.model;
   return {
     lastAgent: defaults.agent,
-    agents: { codex: agent('codex'), 'claude-code': agent('claude-code'), pi: agent('pi') },
+    agents: { codex: agent('codex'), 'claude-code': agent('claude-code'), pi: agent('pi'), antigravity: agent('antigravity') },
     workerPermissionMode: defaults.permission,
     ...(route && taskHostDeviceId ? {
       modelSelectionByHost: {

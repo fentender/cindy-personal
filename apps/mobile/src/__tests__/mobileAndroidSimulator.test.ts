@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { resolvePnpmInvocation, usablePnpmExecPath } from '../../../../scripts/shared/pnpm-invocation.mjs';
 import {
   DEFAULT_ANDROID_AVD,
+  configureAndroidDebugMetro,
   ensureWindowsAndroidEmulator,
   extractAndroidSimulatorArgs,
   parseAdbEmulatorSerials,
@@ -16,6 +17,25 @@ import {
   readAndroidInstalledFingerprint,
   runAndroidProbe,
 } from '../../scripts/lib/android-simulator.mjs';
+
+describe('Android 调试 Metro 地址', () => {
+  it.each([false, true])('配置 ADB 转发地址并保留已有偏好（已有文件=%s）', async (existing) => {
+    const run = vi.fn((_adb, args) => {
+      if (args.includes('ls')) return existing ? 'com.test.app_preferences.xml\n' : '';
+      if (args.includes('cat')) return '<map><boolean name="enabled" value="true"/><string name="other">保留</string><string name="debug_http_host">old:8081</string></map>';
+      return '';
+    });
+    await configureAndroidDebugMetro({ adb: 'adb', serial: 'emulator-5554', packageName: 'com.test.app', port: 8081, run });
+    const write = run.mock.calls.at(-1);
+    expect(write[1]).toEqual(['-s', 'emulator-5554', 'shell', 'run-as', 'com.test.app', 'sh', '-c', "'cat > shared_prefs/com.test.app_preferences.xml'"]);
+    expect(write[2].input).toContain('<string name="debug_http_host">127.0.0.1:8081</string>');
+    expect(write[2].input).not.toContain('old:8081');
+    if (existing) {
+      expect(write[2].input).toContain('<boolean name="enabled" value="true"/>');
+      expect(write[2].input).toContain('<string name="other">保留</string>');
+    }
+  });
+});
 
 describe('Android whoami read-only probes', () => {
   // #9422 acceptance was blocked by iOS-only whoami. These production probes

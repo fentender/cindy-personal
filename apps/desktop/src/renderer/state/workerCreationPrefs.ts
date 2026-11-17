@@ -19,7 +19,7 @@ import {
 const STORAGE_KEY = 'workerCreationPrefs';
 const CHANGE_EVENT = 'cindy:worker-creation-prefs-changed';
 
-export type WorkerAgentKind = 'codex' | 'claude-code' | 'pi';
+export type WorkerAgentKind = 'codex' | 'claude-code' | 'pi' | 'antigravity';
 
 export interface WorkerAgentPrefs {
   model: string;
@@ -40,6 +40,7 @@ export interface WorkerCreationPrefs {
   codex: WorkerAgentPrefs;
   'claude-code': WorkerAgentPrefs;
   pi: WorkerAgentPrefs;
+  antigravity: WorkerAgentPrefs;
   /** 新 Worker 的默认权限；UI 与 Orca tool 共用。 */
   workerPermissionMode: OrcaWorkerPermissionMode;
   /** 按账号与任务所在电脑隔离（JSON 二元组）；缺项时继续跟随 Lead 的位置。 */
@@ -232,7 +233,7 @@ export function toRemoteWorkerRoles(
     defaults: {
       agent: prefs.lastAgent,
       permission: prefs.workerPermissionMode,
-      agents: { codex: prefs.codex, 'claude-code': prefs['claude-code'], pi: prefs.pi },
+      agents: { codex: prefs.codex, 'claude-code': prefs['claude-code'], pi: prefs.pi, antigravity: prefs.antigravity },
       ...(route ? { model: route } : {}),
     },
   };
@@ -253,6 +254,7 @@ export function fromRemoteWorkerDefaults(
     codex: defaults.agents.codex,
     'claude-code': defaults.agents['claude-code'],
     pi: defaults.agents.pi,
+    antigravity: defaults.agents.antigravity ?? DEFAULT_WORKER_CREATION_PREFS.antigravity,
     workerPermissionMode: defaults.permission,
     ...(defaults.model ? { modelSelectionByHost: { [scope]: defaults.model } } : {}),
   };
@@ -314,6 +316,7 @@ export const DEFAULT_WORKER_CREATION_PREFS: WorkerCreationPrefs = {
   codex: { model: DEFAULT_ORCA_WORKER_MODELS.codex, effort: DEFAULT_ORCA_WORKER_EFFORT as Effort, fast: false, providerId: null },
   'claude-code': { model: DEFAULT_ORCA_WORKER_MODELS['claude-code'], effort: DEFAULT_ORCA_WORKER_EFFORT as Effort, fast: false, providerId: null },
   pi: { model: DEFAULT_ORCA_WORKER_MODELS.pi, effort: DEFAULT_ORCA_WORKER_EFFORT as Effort, fast: false, providerId: null },
+  antigravity: { model: DEFAULT_ORCA_WORKER_MODELS.antigravity, effort: DEFAULT_ORCA_WORKER_EFFORT as Effort, fast: false, providerId: null },
   workerPermissionMode: DEFAULT_ORCA_WORKER_PERMISSION_MODE,
 };
 
@@ -323,6 +326,7 @@ function defaultPrefs(): WorkerCreationPrefs {
     codex: { ...DEFAULT_WORKER_CREATION_PREFS.codex },
     'claude-code': { ...DEFAULT_WORKER_CREATION_PREFS['claude-code'] },
     pi: { ...DEFAULT_WORKER_CREATION_PREFS.pi },
+    antigravity: { ...DEFAULT_WORKER_CREATION_PREFS.antigravity },
   };
 }
 
@@ -350,10 +354,11 @@ export function readWorkerCreationPrefs(): WorkerCreationPrefs {
           ? 'claude-code'
           : parsed.lastAgent === 'pi'
             ? 'pi'
-            : 'codex',
+            : parsed.lastAgent === 'antigravity' ? 'antigravity' : 'codex',
       codex: agentPrefs('codex'),
       'claude-code': agentPrefs('claude-code'),
       pi: agentPrefs('pi'),
+      antigravity: agentPrefs('antigravity'),
       workerPermissionMode: resolveOrcaWorkerPermissionMode(parsed.workerPermissionMode),
       modelSelectionByHost: readModelSelections(parsed.modelSelectionByHost),
       ...readRolesByOwner(parsed.rolesByOwner),
@@ -416,7 +421,7 @@ function readModelSelections(value: unknown): Record<string, WorkerModelSelectio
     if (!selection || typeof selection !== 'object') return [];
     const item = selection as Partial<WorkerModelSelection>;
     if (
-      (item.agent !== 'codex' && item.agent !== 'claude-code' && item.agent !== 'pi')
+      (item.agent !== 'codex' && item.agent !== 'claude-code' && item.agent !== 'pi' && item.agent !== 'antigravity')
       || typeof item.model !== 'string' || !item.model.trim()
       || typeof item.effort !== 'string'
       || (item.agentDeviceId !== null && (typeof item.agentDeviceId !== 'string' || !item.agentDeviceId.trim()))

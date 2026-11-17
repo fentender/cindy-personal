@@ -1,4 +1,5 @@
 import { expect, it } from "vitest";
+import { isPluginModelSelection } from '../pluginPages';
 import {
   parseModelFavoriteMutation,
   parseModelFavorites,
@@ -14,6 +15,11 @@ import {
 } from "../index";
 import { REMOTE_INVOKE_ALLOWLIST, PUSH_FORWARD_ALLOWLIST } from "../allowlist";
 import { topicForPush } from "../topics";
+it('preserves native Antigravity selections in remote favorites and plugin pickers', () => {
+  const favorite = { uid: 'native', providerId: 'antigravity', modelId: 'gemini-4-argon', agent: 'antigravity', effort: 'medium' };
+  expect(parseModelFavorites([favorite])).toEqual([favorite]);
+  expect(isPluginModelSelection({ agentKind: favorite.agent, providerId: favorite.providerId, model: favorite.modelId, effort: favorite.effort, fastMode: false })).toBe(true);
+});
 const item = {
   uid: "fav-1",
   providerId: "account",

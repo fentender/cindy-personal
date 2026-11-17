@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { extractAndroidSimulatorArgs } from '../../scripts/lib/android-simulator.mjs';
 import { join, posix, resolve } from 'node:path';
 import { runInNewContext } from 'node:vm';
 import { describe, expect, it, vi } from 'vitest';
@@ -63,6 +64,7 @@ async function rebuild(options: {
   const validateSimMetroIdentity = vi.fn(() => ({ healthy: options.metroHealthy !== false, code: 'METRO_OTHER_WORKTREE' }));
   const resolveAndroidSdkTools = vi.fn(() => ({ sdkRoot: '/sdk' }));
   const ensureWindowsAndroidEmulator = vi.fn(async () => ({ sdkRoot: '/sdk', adb: '/sdk/adb', serial: 'emulator-5554' }));
+  const configureAndroidDebugMetro = vi.fn(async () => undefined);
   const javaEnv = { ...env, JAVA_HOME: '/jdk17', ANDROID_SDK_ROOT: '/sdk', ANDROID_HOME: '/sdk' };
   const resolveJavaRuntimeEnv = vi.fn(() => javaEnv);
   const log = vi.fn();
@@ -70,6 +72,7 @@ async function rebuild(options: {
     mobileDir, worktreeRoot: '/repo', join: posix.join, resolve: posix.resolve, homedir: () => '/home/test',
     process: processStub, console: { log, error: log, warn: log }, execFileSync, spawnSync,
     mobileClientBundleEnv, extractMobileDevRegionArgs, withLocalMobileRegionConfig,
+    extractAndroidSimulatorArgs: (args: string[]) => extractAndroidSimulatorArgs(args, processStub.platform),
     extractSimWhoamiUdidArgs, selectBootedSimulator, findSimulatorDeviceSet, simctlArgs,
     simulatorBackendNotice: (input: object) => simulatorBackendNotice({ cindyAvailable: true, ...input } as never),
     resolveSimulatorDeviceSets: () => [cindySet, { name: 'system', path: null }],
@@ -92,7 +95,7 @@ async function rebuild(options: {
     },
     readdirSync: (path: string) => path === `${mobileDir}/ios` ? ['Cindy.xcworkspace'] : cacheEntries,
     statSync: (path: string) => ({ isDirectory: () => true, mtimeMs: now - (path.endsWith('/old') ? 3_600_000 : cacheEntries.indexOf(posix.basename(path)) * 1000) }),
-    resolveAndroidSdkTools, ensureWindowsAndroidEmulator, resolveJavaRuntimeEnv,
+    resolveAndroidSdkTools, ensureWindowsAndroidEmulator, configureAndroidDebugMetro, resolveJavaRuntimeEnv,
     probeMetroOwnership: () => ({ cwd: mobileDir, source: 'same', region: 'global', envFingerprint: 'same-env' }),
     applySimMockArg: (args: string[]) => args,
     readSimEnvironment: () => ({ envFingerprint: 'same-env' }), gitSourceIdentity: () => 'same',
@@ -100,7 +103,7 @@ async function rebuild(options: {
   });
   let error: unknown;
   try { await execution; } catch (caught) { error = caught; }
-  return { error, execFileSync, spawnSync, podInstallBounded, rmSync, cpSync, writeFileSync, utimesSync, validateSimMetroIdentity, resolveAndroidSdkTools, ensureWindowsAndroidEmulator, resolveJavaRuntimeEnv, javaEnv, log };
+  return { error, execFileSync, spawnSync, podInstallBounded, rmSync, cpSync, writeFileSync, utimesSync, validateSimMetroIdentity, resolveAndroidSdkTools, ensureWindowsAndroidEmulator, configureAndroidDebugMetro, resolveJavaRuntimeEnv, javaEnv, log };
 }
 
 describe('sim-rebuild workflow', () => {
@@ -225,18 +228,23 @@ describe('sim-rebuild workflow', () => {
   // short-staging init script because its fixed target prefix exceeds the
   // remaining path budget. platform=win32 is sufficient.
   it.each([true, false])('keeps Windows CMake path shortening and checks Metro before launch (healthy=%s)', async (healthy) => {
-    const result = await rebuild({ platform: 'win32', metroHealthy: healthy });
+    const result = await rebuild({ platform: 'win32', metroHealthy: healthy, args: ['--avd', 'PersonalPixel'] });
     expect(result.error).toEqual(new Error(`exit:${healthy ? 0 : 1}`));
     expect(result.resolveAndroidSdkTools).toHaveBeenCalledWith(expect.objectContaining({ platform: 'win32', requireTools: true }));
+    expect(result.ensureWindowsAndroidEmulator).toHaveBeenCalledWith({ avd: 'PersonalPixel', port: 8081 });
     expect(result.resolveJavaRuntimeEnv).toHaveBeenCalledWith(expect.objectContaining({ ANDROID_SDK_ROOT: '/sdk', ANDROID_HOME: '/sdk', CINDY_USE_LOCAL_REGION_CONFIG: '1' }));
     expect(result.execFileSync).toHaveBeenCalledWith('/node', ['/tools/pnpm.cjs', 'exec', 'expo', 'prebuild', '--platform', 'android', '--no-install'], expect.any(Object));
-    expect(result.execFileSync).toHaveBeenCalledWith('cmd.exe', ['/d', '/s', '/c', '.\\gradlew.bat assembleDebug -Pexpo.android.cmakeObjectPathMax=0 --init-script ..\\scripts\\sim-windows-native.gradle'], expect.objectContaining({ cwd: `${mobileDir}/android`, env: result.javaEnv, windowsVerbatimArguments: true }));
+    expect(result.execFileSync).toHaveBeenCalledWith('cmd.exe', ['/d', '/s', '/c', '.\\gradlew.bat assembleDebug -Pexpo.android.cmakeObjectPathMax=0 -Pksp.incremental=false --no-daemon -Pkotlin.compiler.execution.strategy=in-process -Dorg.gradle.jvmargs=-Xmx2048m --init-script ..\\scripts\\sim-windows-native.gradle'], expect.objectContaining({ cwd: `${mobileDir}/android`, env: result.javaEnv, windowsVerbatimArguments: true }));
     const install = result.execFileSync.mock.calls.findIndex(([, args]) => args.includes('install'));
     const launch = result.execFileSync.mock.calls.findIndex(([, args]) => args.includes('monkey'));
     expect(install).toBeGreaterThanOrEqual(0);
     expect(result.validateSimMetroIdentity).toHaveBeenCalledWith(expect.objectContaining({ currentRegion: 'global', runningRegion: 'global', currentEnvFingerprint: 'same-env', runningEnvFingerprint: 'same-env' }));
     expect(result.execFileSync.mock.invocationCallOrder[install]).toBeLessThan(result.validateSimMetroIdentity.mock.invocationCallOrder[0]);
-    if (healthy) expect(result.validateSimMetroIdentity.mock.invocationCallOrder[0]).toBeLessThan(result.execFileSync.mock.invocationCallOrder[launch]);
+    if (healthy) {
+      expect(result.configureAndroidDebugMetro).toHaveBeenCalledWith({ adb: '/sdk/adb', serial: 'emulator-5554', packageName: 'com.xd.cindy', port: 8081 });
+      expect(result.validateSimMetroIdentity.mock.invocationCallOrder[0]).toBeLessThan(result.configureAndroidDebugMetro.mock.invocationCallOrder[0]);
+      expect(result.configureAndroidDebugMetro.mock.invocationCallOrder[0]).toBeLessThan(result.execFileSync.mock.invocationCallOrder[launch]);
+    }
     else expect(launch).toBe(-1);
     expect(result.execFileSync.mock.calls.some(([cmd]) => ['xcrun', 'xcodebuild'].includes(cmd))).toBe(false);
     expect(result.podInstallBounded).not.toHaveBeenCalled();

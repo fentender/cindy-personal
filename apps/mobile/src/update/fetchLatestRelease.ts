@@ -2,6 +2,8 @@
 import { i18n } from '@/i18n';
 import { OTA_SERVER_BASE_URL } from '@/config/env';
 import type { UpdateChannel } from '@cindy/maker-shared/update-channel';
+import { personalReleaseSource, personalReleaseAssetUrl } from '@cindy/maker-shared/personal-release';
+import { parseLatestRelease } from './bundleUpdate';
 
 const DEFAULT_TIMEOUT_MS = 8000;
 
@@ -26,18 +28,29 @@ export async function fetchLatestRelease(
   baseUrl = OTA_SERVER_BASE_URL,
   channel: UpdateChannel = 'release',
 ): Promise<unknown | null> {
-  if (!baseUrl) return null; // 非自建变体,无自托管服务
+  const personal = personalReleaseSource(process.env.EXPO_PUBLIC_CINDY_PERSONAL_RELEASE_REPOSITORY);
+  if (!personal && !baseUrl) return null; // 非自建变体,无自托管服务
+  if (personal && platform !== 'android') throw new Error('Personal releases currently support Android only');
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const channelQuery = channel === 'release' ? '' : `&channel=${channel}`;
-    const res = await fetch(`${baseUrl}/latest?platform=${encodeURIComponent(platform)}${channelQuery}&t=${Date.now()}`, {
+    const url = personal ? `${personal.manifestBaseUrl}/mobile-android.json?t=${Date.now()}`
+      : `${baseUrl}/latest?platform=${encodeURIComponent(platform)}${channelQuery}&t=${Date.now()}`;
+    const res = await fetch(url, {
       signal: controller.signal,
       headers: { accept: 'application/json', 'cache-control': 'no-cache' },
     });
     if (res.status === 404) return null; // 服务端确认暂无记录 = 无更新
     if (!res.ok) throw new Error(i18n.t('update.latestRequestFailed', { status: res.status })); // 5xx 等服务异常,不能当成"无更新"
-    return await res.json();
+    const data: unknown = await res.json();
+    if (personal) {
+      const record = parseLatestRelease(data);
+      if (!record || record.delivery !== 'apk') throw new Error('Invalid personal Android release manifest');
+      personalReleaseAssetUrl(personal, record.installUrl);
+      return record;
+    }
+    return data;
   } finally {
     clearTimeout(timer);
   }
@@ -66,6 +79,7 @@ export async function probeBetaChannel(
   timeoutMs = DEFAULT_TIMEOUT_MS,
   baseUrl = OTA_SERVER_BASE_URL,
 ): Promise<boolean> {
+  if (personalReleaseSource(process.env.EXPO_PUBLIC_CINDY_PERSONAL_RELEASE_REPOSITORY)) return false;
   if (!baseUrl) return false; // 非自建变体:无自托管服务,beta 不可用
   try {
     const record = await fetchLatestRelease(platform, timeoutMs, baseUrl, 'beta');

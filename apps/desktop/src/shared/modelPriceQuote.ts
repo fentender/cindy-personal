@@ -340,11 +340,10 @@ function referencePriceQuoteForVariant(
   registry: ModelRegistry | null | undefined,
   options: ReferencePriceOptions = {},
 ): ModelPriceQuote | undefined {
-  // 参考价 registry 的 agent 维度只有 claude-code / codex;Pi(动态 BYOM,按 provider/模型
-  // 路由)在此按 agent 无关的参考价解析 —— pi 一律降级为 undefined 传给协议函数。
+  // 参考价目录只为 Claude Code / Codex 列引擎维度；其它引擎按精确供应商和型号查参考价。
   const resolved = resolveModelReferencePrice(registry, providerId, modelId, {
     ...options,
-    agent: options.agent === 'pi' ? undefined : options.agent,
+    agent: options.agent === 'claude-code' || options.agent === 'codex' ? options.agent : undefined,
   });
   if (!resolved) return undefined;
   const day = referencePriceCalendarDate(options.at);

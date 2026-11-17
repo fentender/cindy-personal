@@ -32,9 +32,9 @@ import { withVerifiedStaticWindows } from './builtin.js';
 import { findReservedOAuthExtraParam } from './provider-oauth.js';
 import { isProviderRequestPath } from './provider-url.js';
 
-export { BUNDLED_CATALOG, BUILTIN_PROVIDERS, claudeSubscriptionOnlyForClaudeCode } from './builtin.js';
+export { ANTIGRAVITY_PROVIDER, BUNDLED_CATALOG, BUILTIN_PROVIDERS, claudeSubscriptionOnlyForClaudeCode } from './builtin.js';
 
-const AGENT_KINDS: readonly AgentKind[] = ['claude-code', 'codex', 'pi'];
+const AGENT_KINDS: readonly AgentKind[] = ['claude-code', 'codex', 'pi', 'antigravity'];
 const EFFORTS: readonly Effort[] = ['minimal', 'low', 'medium', 'high', 'xhigh', 'max', 'ultra'];
 const WIRE_PROTOCOLS = ['anthropic-messages', 'openai-responses', 'openai-chat', 'google-generative-ai'] as const;
 
@@ -171,7 +171,10 @@ function validateModel(
       `model.route invalid for '${m.id}' in provider '${providerId}'`,
     );
   }
-  assert(typeof m.contextWindow === 'number' && m.contextWindow > 0, `model.contextWindow invalid for '${m.id}'`);
+  // ACP 配置没有提供窗口时，保留未知值，不能把推测容量当成原生上限。
+  assert(typeof m.contextWindow === 'number' && (m.contextWindow > 0 ||
+    (agent === 'antigravity' && m.contextWindow === 0 && m.contextWindowVerified !== true)),
+  `model.contextWindow invalid for '${m.id}'`);
   assert(Array.isArray(m.efforts), `model.efforts must be array for '${m.id}'`);
   assert(m.efforts.every(isEffort), `model.efforts has invalid value for '${m.id}'`);
   if (m.defaultEffort !== null) {
@@ -319,6 +322,13 @@ function validateProvider(p: Provider, allowEmptyModalities = false): void {
   for (const agent of p.agents) {
     const routing = p.routing[agent];
     assert(routing, `provider '${p.id}' declares agent '${agent}' but no routing[${agent}]`);
+    if (agent === 'antigravity') {
+      assert(routing.transport === 'acp' && routing.upstream === undefined && routing.wireProtocol === undefined,
+        `provider '${p.id}' Antigravity requires native ACP routing`);
+    } else {
+      assert(routing.transport === undefined || routing.transport === 'http',
+        `provider '${p.id}' routing[${agent}] requires HTTP transport`);
+    }
     if (routing.upstream !== undefined) {
       let valid = false;
       try {

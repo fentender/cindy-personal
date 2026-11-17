@@ -1232,6 +1232,19 @@ describe('makerChatStore text delta batching', () => {
     });
   });
 
+  it('updates a native tool title and arguments in place using its persisted identity', () => {
+    for (const data of [
+      { toolUseId: 'read-1', toolName: 'Read file', input: {} },
+      { toolUseId: 'read-1', toolName: 'read_file', input: { Path: '/workspace/a.txt' } },
+    ]) {
+      onEvent?.({ sessionId: SESSION_ID, event: { type: 'tool_use', source: 'antigravity', data }, persistId: 'read-message-1' });
+    }
+    const messages = makerChatStore.getSnapshot(SESSION_ID).messages;
+    expect(messages).toHaveLength(1);
+    expect(messages[0]).toMatchObject({ clientId: 'read-message-1', toolUseId: 'read-1',
+      toolName: 'read_file', toolInput: { Path: '/workspace/a.txt' } });
+  });
+
   it('accepts the terminal persisted plan when the renderer mounted with stale progress', () => {
     onEvent?.({
       sessionId: SESSION_ID,

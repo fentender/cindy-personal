@@ -11,6 +11,8 @@
 
 /** mobile-update-server `/latest` 返回的整包版本记录(release.json 透传)。 */
 export interface LatestReleaseRecord {
+  /** 独立 APK 发行不使用 JS OTA，原生版本提高就需要安装整包。 */
+  delivery?: 'apk';
   version: string;
   buildNumber: string | number;
   runtimeVersion: string;
@@ -81,8 +83,9 @@ export function parseLatestRelease(value: unknown): LatestReleaseRecord | null {
   const installUrl = typeof v.installUrl === 'string' ? v.installUrl.trim() : '';
   const itmsUrl = typeof v.itmsUrl === 'string' ? v.itmsUrl.trim() : '';
   // 必须有 runtimeVersion、支持的 version 和一个可跳转的安装地址。
-  if (!runtimeVersion || !isSupportedBundleVersion(version) || (!installUrl && !itmsUrl)) return null;
+  if ((!runtimeVersion && v.delivery !== 'apk') || !isSupportedBundleVersion(version) || (!installUrl && !itmsUrl)) return null;
   const record: LatestReleaseRecord = {
+    ...(v.delivery === 'apk' ? { delivery: 'apk' as const } : {}),
     version,
     buildNumber: (typeof v.buildNumber === 'string' || typeof v.buildNumber === 'number') ? v.buildNumber : '',
     runtimeVersion,
@@ -130,7 +133,7 @@ export function evaluateBundleUpdate({
   if (!record) return NO_UPDATE;
 
   const current = String(currentRuntimeVersion ?? '').trim();
-  if (!current) return NO_UPDATE;
+  if (!current && record.delivery !== 'apk') return NO_UPDATE;
 
   const currentAppVersion = String(currentVersion ?? '').trim();
   if (!isSupportedBundleVersion(currentAppVersion)) return NO_UPDATE;
@@ -147,7 +150,7 @@ export function evaluateBundleUpdate({
     compareVersions(record.version, record.minVersion) >= 0,
   );
 
-  if (!forced && record.runtimeVersion === current) return NO_UPDATE;
+  if (!forced && record.delivery !== 'apk' && record.runtimeVersion === current) return NO_UPDATE;
 
   return {
     needsUpdate: true,

@@ -3,6 +3,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { runGit } from '../../git-review/gitRunner';
+import { AntigravityTranslator } from '../../../../../../packages/maker-core/src/agents/antigravity/translator';
 
 const mocks = vi.hoisted(() => ({
   userDataRoot: '',
@@ -80,16 +81,16 @@ describe('turn change-set sidecar store', () => {
     await fs.rm(root, { recursive: true, force: true });
   });
 
-  it('persists the native Codex patch under the dispatch anchor without a database write', async () => {
+  it.each(['codex', 'antigravity'] as const)('persists the native %s patch under the dispatch anchor without a database write', async (provider) => {
     await beginTurnChangeSet({
       sessionId: 'session-1',
       anchorClientId: 'user-1',
-      provider: 'codex',
+      provider,
       cwd: workdir,
     });
     noteTurnDiffEvent('session-1', {
       type: 'turn_diff',
-      source: 'codex',
+      source: provider,
       data: {
         turnId: 'turn-1',
         cwd: workdir,
@@ -116,12 +117,32 @@ describe('turn change-set sidecar store', () => {
     );
     expect(summary).toMatchObject({
       anchorClientId: 'user-1',
-      provider: 'codex',
+      provider,
       providerTurnId: 'turn-1',
       state: 'complete',
       additions: 1,
       deletions: 1,
     });
+  });
+
+  it('records a completed ACP edit through the native translator and reuses exact undo/reapply', async () => {
+    const target = path.join(workdir, 'native file.txt');
+    await fs.writeFile(target, 'before\n');
+    await beginTurnChangeSet({ sessionId: 'session-1', anchorClientId: 'user-1', provider: 'antigravity', cwd: workdir });
+    const translator = new AntigravityTranslator(workdir, event => noteTurnDiffEvent('session-1', { ...event, source: 'antigravity' }));
+    translator.beginTurn('native-model');
+    translator.update({ sessionUpdate: 'tool_call', toolCallId: 'edit', title: 'Edit', kind: 'edit', status: 'pending',
+      content: [{ type: 'diff', path: target, oldText: 'before\n', newText: 'after\n' }] });
+    await fs.writeFile(target, 'after\n');
+    translator.update({ sessionUpdate: 'tool_call_update', toolCallId: 'edit', status: 'completed' });
+    translator.complete({ stopReason: 'end_turn' });
+    await finalizeTurnChangeSet('session-1', null, 'complete');
+    const [summary] = await listTurnChangeSets('session-1');
+    expect(summary).toMatchObject({ provider: 'antigravity', additions: 1, deletions: 1, isReversible: true });
+    await applyTurnChangeSetAction('session-1', summary.id, 'undo');
+    expect(await fs.readFile(target, 'utf8')).toBe('before\n');
+    await applyTurnChangeSetAction('session-1', summary.id, 'reapply');
+    expect(await fs.readFile(target, 'utf8')).toBe('after\n');
   });
 
   it('drains queued sidecar persistence before shutdown returns', async () => {

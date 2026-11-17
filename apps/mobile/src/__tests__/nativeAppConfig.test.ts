@@ -6,6 +6,9 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 const require = createRequire(import.meta.url);
 const managedEnvKeys = [
+  'EXPO_PUBLIC_CINDY_PERSONAL_RELEASE_REPOSITORY',
+  'CINDY_PERSONAL_RELEASE_VERSION',
+  'XDT_ANDROID_VERSION_CODE',
   'CINDY_CN_APP_STORE_ID',
   'CINDY_GLOBAL_APP_STORE_ID',
   'EAS_BUILD_PROFILE',
@@ -51,6 +54,32 @@ afterEach(() => {
 });
 
 describe('mobile native app config', () => {
+  it('builds personal APK updates with an independent identity and no JS OTA or required analytics', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'cindy-personal-config-'));
+    temporaryDirs.push(dir);
+    const regions = join(dir, 'regions.json');
+    writeFileSync(regions, JSON.stringify({ cn: {
+      iosBundleId: 'cn.example.personal', androidPackage: 'cn.example.personal',
+    } }));
+    Object.assign(process.env, {
+      EXPO_PUBLIC_CINDY_AUTH_REGION: 'cn',
+      EXPO_PUBLIC_XDT_OTA_SELFHOST: '1',
+      EXPO_PUBLIC_CINDY_PERSONAL_RELEASE_REPOSITORY: 'example/cindy-personal',
+      CINDY_PERSONAL_RELEASE_VERSION: '1.0.2',
+      XDT_ANDROID_VERSION_CODE: '10002',
+      CINDY_SELF_HOST_REGIONS_FILE: regions,
+    });
+    const config = require(resolve(process.cwd(), 'app.config.js'))();
+    expect(config.name).toBe('Cindy Personal');
+    expect(config.version).toBe('1.0.2');
+    expect(config.android.package).toBe('cn.example.personal');
+    expect(config.android.versionCode).toBe(10002);
+    expect(config.updates.enabled).toBe(false);
+    expect(config.extra.cindy.tapdb).toBeUndefined();
+    expect(config.android.permissions).toContain('android.permission.REQUEST_INSTALL_PACKAGES');
+    process.env.CINDY_MOBILE_OTA_NATIVE = '1';
+    expect(() => require(resolve(process.cwd(), 'app.config.js'))()).toThrow(/personal.*APK/i);
+  });
   // Unit: OS permission sheets bypass i18next. Resolve the real Expo config
   // through Expo's native localization entry point, including platform scoping.
   it('resolves localized iOS permission resources without leaking them into Android', async () => {

@@ -65,8 +65,12 @@ interface ViewSpec {
 
 function view(spec: ViewSpec): ProviderView {
   const agents = Object.keys(spec.models) as AgentKind[];
-  const routing: Partial<Record<AgentKind, RoutingDescriptor>> = {};
+  const routing: ProviderView['routing'] = {};
   for (const agent of agents) {
+    if (agent === 'antigravity') {
+      routing.antigravity = { transport: 'acp', authStrategy: 'oauth-passthrough' };
+      continue;
+    }
     routing[agent] = {
       upstream: 'https://example.test',
       authStrategy: spec.authStrategy ?? 'oauth-passthrough',
@@ -169,6 +173,19 @@ const zhipu = view({
 });
 
 const alwaysVisible = () => true;
+
+// 原生 Antigravity 的账号目录必须进入统一选择器；相同型号的 Pi 来源仍独立。
+// tier：unit，最小输入为两个已连接来源，旧三引擎遍历会直接丢弃原生来源。
+it('keeps the Antigravity subscription distinct from a Pi proxy offering the same model', () => {
+  const native = view({ id: 'antigravity', models: { antigravity: [m('gemini-4-argon')] } });
+  const proxy = view({ id: 'local-proxy', source: 'user', models: { pi: [m('gemini-4-argon')] } });
+  const providers = [native, proxy];
+  const entries = unifiedModelEntries({ providers, isVisible: alwaysVisible });
+  expect(entries).toHaveLength(2);
+  expect(candidateAgentsForModel(providers, 'antigravity', 'gemini-4-argon')).toEqual(['antigravity']);
+  expect(candidateAgentsForModel(providers, 'local-proxy', 'gemini-4-argon')).toEqual(['pi']);
+  expect(resolveWireModelId(native, 'gemini-4-argon', 'antigravity')).toBe('gemini-4-argon');
+});
 
 function find(entries: readonly UnifiedModelEntry[], pid: string, mid: string) {
   return entries.find((e) => e.providerId === pid && e.modelId === mid);
@@ -275,7 +292,7 @@ describe('candidateAgentsForModel', () => {
       'codex',
       'pi',
     ]);
-    expect(UNIFIED_AGENT_PRIORITY).toEqual(['claude-code', 'codex', 'pi']);
+    expect(UNIFIED_AGENT_PRIORITY).toEqual(['claude-code', 'codex', 'pi', 'antigravity']);
   });
 
   it('bridge 壳与 root 条目寻址同一逻辑模型,候选是并集', () => {

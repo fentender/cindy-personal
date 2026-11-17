@@ -394,7 +394,9 @@
         "all": "全部",
         "cc": "Claude Code",
         "codex": "Codex",
-        "pi": "Pi"
+        "pi": "Pi",
+
+        "antigravity": "Antigravity"
       },
       "filterLastActivityHeading": "最近活跃",
       "filterLastActivity": {
@@ -453,7 +455,9 @@
           "all": "全部",
           "cc": "Claude Code",
           "codex": "Codex",
-          "pi": "Pi"
+          "pi": "Pi",
+
+          "antigravity": "Antigravity"
         },
         "lastActivity": {
           "1d": "1 天",

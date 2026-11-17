@@ -2020,7 +2020,7 @@ function NewRemoteSessionContent({ creatingRef }: { creatingRef: { current: bool
         setAvailableAgentKinds(
           new Set(
             (Array.isArray(agents) ? agents : []).filter(
-              (a): a is NewSessionAgentKind => a === 'claude-code' || a === 'codex' || a === 'pi',
+              (a): a is NewSessionAgentKind => a === 'claude-code' || a === 'codex' || a === 'pi' || a === 'antigravity',
             ),
           ),
         );

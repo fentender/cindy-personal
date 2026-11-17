@@ -3372,7 +3372,7 @@ export function stopPiIdleReleaseWatcher(): void {
 }
 
 function requireAgentKind(value: unknown): AgentKind {
-  if (value === 'claude-code' || value === 'codex' || value === 'pi') return value;
+  if (value === 'claude-code' || value === 'codex' || value === 'pi' || value === 'antigravity') return value;
   throwIpcError('INVALID_PARAMS', 'agentKind required');
 }
 
@@ -7386,8 +7386,8 @@ export function registerMakerIpc(maker: Maker, options: RegisterMakerIpcOptions)
       markModelChoice?: unknown;
       taskProviderId?: unknown;
     };
-    if (p.agent !== 'claude-code' && p.agent !== 'codex' && p.agent !== 'pi') {
-      throwIpcError('INVALID_PARAMS', 'agent must be claude-code|codex|pi');
+    if (p.agent !== 'claude-code' && p.agent !== 'codex' && p.agent !== 'pi' && p.agent !== 'antigravity') {
+      throwIpcError('INVALID_PARAMS', 'agent must be claude-code|codex|pi|antigravity');
     }
     if (p.providerId !== undefined && typeof p.providerId !== 'string') {
       throwIpcError('INVALID_PARAMS', 'providerId must be string');
@@ -7469,8 +7469,8 @@ export function registerMakerIpc(maker: Maker, options: RegisterMakerIpcOptions)
     if (typeof p.sessionId !== 'string' || !p.sessionId) {
       throwIpcError('INVALID_PARAMS', 'sessionId required');
     }
-    if (p.agent !== 'claude-code' && p.agent !== 'codex' && p.agent !== 'pi') {
-      throwIpcError('INVALID_PARAMS', 'agent must be claude-code|codex|pi');
+    if (p.agent !== 'claude-code' && p.agent !== 'codex' && p.agent !== 'pi' && p.agent !== 'antigravity') {
+      throwIpcError('INVALID_PARAMS', 'agent must be claude-code|codex|pi|antigravity');
     }
     if (typeof p.providerId !== 'string' || !p.providerId) {
       throwIpcError('INVALID_PARAMS', 'providerId required');
@@ -7509,7 +7509,7 @@ export function registerMakerIpc(maker: Maker, options: RegisterMakerIpcOptions)
     if (
       typeof p.sessionId !== 'string' ||
       !p.sessionId ||
-      (p.agent !== 'claude-code' && p.agent !== 'codex' && p.agent !== 'pi') ||
+      (p.agent !== 'claude-code' && p.agent !== 'codex' && p.agent !== 'pi' && p.agent !== 'antigravity') ||
       typeof p.providerId !== 'string' ||
       !p.providerId ||
       typeof p.model !== 'string' ||
@@ -7714,7 +7714,7 @@ export function registerMakerIpc(maker: Maker, options: RegisterMakerIpcOptions)
       const provider = getActiveCatalog().providers.find((p) => p.id === providerId);
       if (!provider || provider.source !== 'user') return null;
       const routing = provider.routing[agent];
-      if (!routing || routing.disabled) return null;
+      if (!routing || routing.transport === 'acp' || routing.disabled) return null;
       return { baseUrl: routing.upstream, modelsUrl: routing.modelsUrl ?? null };
     },
     getLedgerCurrency: currentLedgerCurrency,
@@ -10099,7 +10099,7 @@ export function registerMakerIpc(maker: Maker, options: RegisterMakerIpcOptions)
     assertSessionCreationCurrent();
     await ensureRemoteHostReady(remoteHostIdToEnsure);
     assertSessionCreationCurrent();
-    const ensureAgentKind: 'claude-code' | 'codex' | 'pi' | null =
+    const ensureAgentKind: 'claude-code' | 'codex' | 'pi' | 'antigravity' | null =
       session?.agentKind === 'codex' ||
       session?.agentKind === 'claude-code' ||
       session?.agentKind === 'pi'
@@ -10513,7 +10513,7 @@ export function registerMakerIpc(maker: Maker, options: RegisterMakerIpcOptions)
         status: row.status,
         workingDir: row.workingDir,
         model: row.model,
-        agentKind: row.agentKind === 'cc' ? 'claude-code' : (row.agentKind as 'codex' | 'pi'),
+        agentKind: dbToMakerAgentKind(row.agentKind),
         effort: row.effort,
         fastMode: row.fastMode,
         agentDeviceId: row.agentDeviceId,
@@ -10554,9 +10554,7 @@ export function registerMakerIpc(maker: Maker, options: RegisterMakerIpcOptions)
         await getDbClient().drizzle.insert(sessions).values(row).run();
       },
       bootstrapSession: async (opened, assertCurrent) => {
-        const agentKind = opened.agentKind === 'codex' || opened.agentKind === 'pi'
-          ? opened.agentKind
-          : 'claude-code';
+        const agentKind = dbToMakerAgentKind(opened.agentKind);
         await bootstrapSession(buildCreateOptsWithStderr({
           id: opened.id,
           agentKind,
@@ -10945,7 +10943,7 @@ export function registerMakerIpc(maker: Maker, options: RegisterMakerIpcOptions)
         ...(additionalWorkingDirs.length > 0 ? { additionalWorkingDirs } : {}),
       };
       return {
-        sourceAgentKind: source.agentKind as 'cc' | 'codex' | 'pi',
+        sourceAgentKind: source.agentKind as 'cc' | 'codex' | 'pi' | 'antigravity',
         prompt: builtPrompt.prompt,
         replyLanguage: builtPrompt.replyLanguage,
         inputSummary: buildReviewInputSummary({
@@ -11410,6 +11408,7 @@ export function registerMakerIpc(maker: Maker, options: RegisterMakerIpcOptions)
   });
 
   const agentSwitchDeps: MakerSessionAgentSwitchHandlerDeps = {
+    getAgentPermissionModes: (agentKind) => maker.getCapabilities(agentKind).permissionModes.map((mode) => mode.id),
     readOwnerGeneration: () => getActiveAppSession().generation,
     confirmNativeHistoryFallback: async (sessionId, targetDeviceId) => {
       const label = describeAgentDevice(targetDeviceId) ?? t('sharedTask.otherDevice');
@@ -15613,7 +15612,7 @@ export function registerMakerIpc(maker: Maker, options: RegisterMakerIpcOptions)
         agentDeviceId?: unknown;
       };
       const workerAgent: AgentKind =
-        body.workerAgent === 'codex' ? 'codex' : body.workerAgent === 'pi' ? 'pi' : 'claude-code';
+        dbToMakerAgentKind(typeof body.workerAgent === 'string' ? body.workerAgent : undefined);
       const delegateTask = typeof body.delegateTask === 'string' ? body.delegateTask : undefined;
       if (
         body.workerPermissionMode !== undefined &&
@@ -15893,12 +15892,7 @@ export function registerMakerIpc(maker: Maker, options: RegisterMakerIpcOptions)
     if (typeof b.label !== 'string') throwIpcError('INVALID_PARAMS', 'label required');
     const label = normalizeOrcaWorkerLabel(b.label);
     if (!label.ok) throwIpcError('INVALID_PARAMS', label.message);
-    const agent =
-      b.agent === 'codex'
-        ? ('codex' as const)
-        : b.agent === 'pi'
-          ? ('pi' as const)
-          : ('claude-code' as const);
+    const agent = dbToMakerAgentKind(typeof b.agent === 'string' ? b.agent : undefined);
     const model = typeof b.model === 'string' && b.model.length > 0 ? b.model : undefined;
     if (
       b.workerPermissionMode !== undefined &&
@@ -17309,12 +17303,12 @@ export function registerMakerIpc(maker: Maker, options: RegisterMakerIpcOptions)
     }
     const chain = await readEffectiveBotModelChain(config);
     const toAgentKind = (harness: string): AgentKind =>
-      harness === 'codex' ? 'codex' : harness === 'pi' ? 'pi' : 'claude-code';
+      dbToMakerAgentKind(harness);
     const currentHarness = current.agentKind === 'codex'
       ? 'codex'
       : current.agentKind === 'pi'
         ? 'pi'
-        : 'claude';
+        : current.agentKind === 'antigravity' ? 'antigravity' : 'claude';
     const control = getSessionRuntimeControlSnapshot(controlSessionId);
     const [controlSession] = controlSessionId === sessionId ? [{ remoteHostId: row.remoteHostId }]
       : await getDbClient().drizzle.select({ remoteHostId: sessions.remoteHostId })
@@ -17932,7 +17926,7 @@ export function registerMakerIpc(maker: Maker, options: RegisterMakerIpcOptions)
           });
           return { ok: true, ...result };
         }
-        const agents: AgentKind[] = agent ? [agent] : ['codex', 'claude-code', 'pi'];
+        const agents: AgentKind[] = agent ? [agent] : ['codex', 'claude-code', 'pi', 'antigravity'];
         // SSH Lead 的 Worker 在 SSH 主机上运行 Agent，不能放到别的电脑：不列可选位置。
         const sshLead = callerSessionId ? Boolean(await readSessionRemoteHostIdCached(callerSessionId)) : false;
         // 不指定位置时列 Lead 所在位置(Lead 的 Agent 在另一台电脑运行就列那台；Lead 归在供应商组里就列组那一项
@@ -17961,7 +17955,7 @@ export function registerMakerIpc(maker: Maker, options: RegisterMakerIpcOptions)
             agentDeviceId,
             ...(locations ? { locations } : {}),
             ...Object.fromEntries(agents.map((a) => [
-              a === 'codex' ? 'codex' : a === 'pi' ? 'pi' : 'claude_code',
+              a === 'claude-code' ? 'claude_code' : a,
               deviceAvailableModels(views, a),
             ])),
           };
@@ -17978,8 +17972,7 @@ export function registerMakerIpc(maker: Maker, options: RegisterMakerIpcOptions)
         > = {};
         for (const a of agents) {
           const caps = maker.getCapabilities(a);
-          // key 必须区分 pi,否则 pi 模型会被塞进 claude_code 键与 CC 模型混淆。
-          const key = a === 'codex' ? 'codex' : a === 'pi' ? 'pi' : 'claude_code';
+          const key = a === 'claude-code' ? 'claude_code' : a;
           result[key] = localAvailableModels(
             caps.availableModels,
             providerRouting.availability[a] ?? [],
@@ -20523,7 +20516,8 @@ export function registerMakerIpc(maker: Maker, options: RegisterMakerIpcOptions)
     if (
       msg.createOpts.agentKind !== 'claude-code' &&
       msg.createOpts.agentKind !== 'codex' &&
-      msg.createOpts.agentKind !== 'pi'
+      msg.createOpts.agentKind !== 'pi' &&
+      msg.createOpts.agentKind !== 'antigravity'
     ) {
       throwIpcError('INVALID_PARAMS', 'queued.createOpts.agentKind invalid');
     }
@@ -22158,7 +22152,7 @@ export function registerMakerIpc(maker: Maker, options: RegisterMakerIpcOptions)
       ? atomicSelection.effort
       : ((runtimeStatus.effort ?? null) as SessionRuntimeProfile['effort']);
     const targetFastMode = atomicSelection?.fastMode ?? runtimeStatus.fastMode;
-    const agentKind = dbToMakerAgentKind(runtimeStatus.agentKind as 'cc' | 'codex' | 'pi');
+    const agentKind = dbToMakerAgentKind(runtimeStatus.agentKind as 'cc' | 'codex' | 'pi' | 'antigravity');
     if (internalOptions.source === 'user' && !internalOptions.applyingUserSelectionOnSend) {
       assertRuntimeOwnerCurrent();
       assertSharedTaskCurrent.admit();

@@ -27,7 +27,7 @@ export function resolveAutomaticImSettings<T extends ImDefaultSettings>(
     isModelEnabled?: Parameters<typeof resolveNewMakerDefaultTuple>[0]['isModelEnabled'];
   } = {},
 ): T | null {
-  const agents = (['claude-code', 'codex', 'pi'] as const).filter(
+  const agents = (['claude-code', 'codex', 'pi', 'antigravity'] as const).filter(
     (agent) =>
       (!options.agentKind || options.agentKind === agent) && (options.allowAgent?.(agent) ?? true),
   );

@@ -1335,6 +1335,15 @@ describe('checkForUpdate 版本无关(占位 0.0.0)打包豁免', () => {
 });
 
 describe('personal version app update policy', () => {
+  it('isolates personal release locks and cached patches from the official installation', async () => {
+    vi.stubEnv('CINDY_PERSONAL_RELEASE_REPOSITORY', 'fentender/cindy-personal');
+    try {
+      const service = await freshUpdateService('win32');
+      expect(service.getUpdateLockPath()).not.toContain(path.join(TEST_USER_DATA, 'updates') + path.sep);
+      expect(service.getUpdateLockPath()).toContain('updates-personal');
+    } finally { vi.unstubAllEnvs(); }
+  });
+
   it('skips app checks, background polling and relaunch even with an ordinary version number', async () => {
     appGetVersion.mockReturnValue('1.2.3');
     const service = await freshUpdateService('win32');

@@ -84,7 +84,7 @@ import { useOrcaWorkerDirectoryPicker } from './useOrcaWorkerDirectoryPicker';
 
 export type CollabSheetView = 'collab' | 'collab-create';
 
-const ALL_AGENTS: readonly OrcaWorkerAgentKind[] = ['claude-code', 'codex', 'pi'];
+const ALL_AGENTS: readonly OrcaWorkerAgentKind[] = ['claude-code', 'codex', 'pi', 'antigravity'];
 const EMPTY_MODEL_OPTIONS: readonly MobileModelOption[] = [];
 
 // ─── 团队状态 ────────────────────────────────────────────────────────────────

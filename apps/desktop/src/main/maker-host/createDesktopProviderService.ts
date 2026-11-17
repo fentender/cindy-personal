@@ -1,4 +1,5 @@
 import { listEvaluationModels } from '../cindy-evaluate/models.js';
+import { nativeAntigravityHost } from './antigravity-host.js';
 import { createXaiProviderTokenReader } from './xaiProviderToken.js';
 import { createCatalogCache } from './catalogCache.js';
 import { isModelContextLimitCustomized, readModelContextLimits } from './model-context-limit-store.js';
@@ -1036,6 +1037,7 @@ export function getDesktopProviderService(options: { allowSideEffects?: boolean 
       // only reflects a Cindy OAuth binding (or the explicit legacy migration above);
       // reading the provider list must never auto-claim an arbitrary local token.
       xai: () => hasGrokOAuthLogin(),
+      antigravity: options => nativeAntigravityHost.readConnection(options),
     },
     // 通用 OAuth 供应商（目录 auth.oauth 描述符驱动）：连接态 = 本机凭证 blob 是否存在。
     genericOAuthConnected: (providerId) => hasGenericOAuthLogin(storedCustomProviderId(providerId)),

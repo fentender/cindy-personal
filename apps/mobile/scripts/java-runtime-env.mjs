@@ -24,10 +24,14 @@ export function resolveJavaRuntimeEnv(baseEnv = process.env) {
     if (!existsSync(javaBin)) continue;
     const major = javaMajor(versionForJavaCommand(javaBin, { ...baseEnv, JAVA_HOME: javaHome }));
     if (major < MIN_JAVA_MAJOR) continue;
+    // Windows 环境变量名不区分大小写，保留已有键，避免新增 PATH 遮蔽系统 Path。
+    const pathKey = process.platform === 'win32'
+      ? Object.keys(baseEnv).find(key => key.toLowerCase() === 'path') ?? 'Path'
+      : 'PATH';
     return {
       ...baseEnv,
       JAVA_HOME: javaHome,
-      PATH: [join(javaHome, 'bin'), baseEnv.PATH].filter(Boolean).join(delimiter),
+      [pathKey]: [join(javaHome, 'bin'), baseEnv[pathKey]].filter(Boolean).join(delimiter),
     };
   }
 

@@ -117,6 +117,7 @@ const AGENT_LABEL: Record<AgentKind, string> = {
   codex: 'Codex',
   'claude-code': 'Claude Code',
   pi: 'Pi',
+  antigravity: 'Antigravity',
 };
 
 /**
@@ -206,14 +207,14 @@ export function buildTextOneshotPinOptions(
   hasCredential?: OneshotCredentialProbe,
   purpose: 'plugin' | 'auxiliary' = 'plugin',
 ): TextOneshotPinOption[] {
-  const entries: { provider: Provider; agentKind: AgentKind; model: CatalogModel; direct: boolean }[] = [];
+  const entries: { provider: Provider; agentKind: (typeof ONESHOT_ROUTE_AGENTS)[number]; model: CatalogModel; direct: boolean }[] = [];
   const seenRoutes = new Set<string>();
   for (const provider of orderedProviders(catalog, providerOrder)) {
     if (isProviderDisabled(overrides, provider.id)) continue;
     // Keep the configuration source in each pin: runtimes can have different
     // credentials or endpoints even when the provider and model ids match.
     const direct = purpose === 'auxiliary' && usesDirectTextRoute(provider);
-    const agents: readonly AgentKind[] = direct ? ['codex', 'claude-code', 'pi'] : ONESHOT_ROUTE_AGENTS;
+    const agents = ONESHOT_ROUTE_AGENTS;
     for (const agentKind of agents) {
       if (!direct && !isRoutableForOneshot(provider, agentKind)) continue;
       if (hasCredential && !hasCredential(provider, agentKind)) continue;

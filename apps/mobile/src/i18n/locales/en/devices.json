@@ -394,7 +394,9 @@
         "all": "All",
         "cc": "Claude Code",
         "codex": "Codex",
-        "pi": "Pi"
+        "pi": "Pi",
+
+        "antigravity": "Antigravity"
       },
       "filterLastActivityHeading": "Last activity",
       "filterLastActivity": {
@@ -453,7 +455,9 @@
           "all": "All",
           "cc": "Claude Code",
           "codex": "Codex",
-          "pi": "Pi"
+          "pi": "Pi",
+
+          "antigravity": "Antigravity"
         },
         "lastActivity": {
           "1d": "1d",

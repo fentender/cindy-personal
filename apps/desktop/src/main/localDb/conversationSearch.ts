@@ -298,7 +298,7 @@ function normalizeStatusFilter(
 }
 
 function normalizeAgentFilter(value: ConversationSearchFilters['agentKind']): ConversationSearchAgentFilter {
-  return value === 'cc' || value === 'codex' || value === 'pi' ? value : 'all';
+  return value === 'cc' || value === 'codex' || value === 'pi' || value === 'antigravity' ? value : 'all';
 }
 
 function normalizeLastActivity(

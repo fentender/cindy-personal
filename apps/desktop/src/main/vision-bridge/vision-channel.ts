@@ -583,6 +583,9 @@ export function resolveVisionBackendEndpoint(
     throw new VisionBackendError('not-found', `provider ${providerId} has no usable routing`);
   }
   const routing = provider.routing[agent]!;
+  if (routing.transport === 'acp') {
+    throw new VisionBackendError('unavailable', 'Native ACP models require an agent session');
+  }
   const catalogPresetId = providerRuntimeCatalogPresetId(provider, agent);
   const wireProtocol = wireProtocolFor(provider, agent, modelId);
   if (!wireProtocol) {

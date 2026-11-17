@@ -484,12 +484,12 @@ const WORKER_SESSION_ID = '123e4567-e89b-42d3-a456-426614174000';
 describe('buildNoProviderMessage (pi first-class)', () => {
   const snap = (name: string): OrcaWorkerProviderSnapshot => ({ name }) as OrcaWorkerProviderSnapshot;
   it('names Pi (not Claude Code) when pi has no connected provider', () => {
-    const msg = buildNoProviderMessage('pi', { 'claude-code': [], codex: [], pi: [] });
+    const msg = buildNoProviderMessage('pi', { antigravity: [], 'claude-code': [], codex: [], pi: [] });
     expect(msg).toContain('Pi 当前没有可用的模型供应商');
     expect(msg).not.toContain('Claude Code 当前没有');
   });
   it('suggests pi as a fallback agent when pi alone has a connected provider', () => {
-    const msg = buildNoProviderMessage('codex', {
+    const msg = buildNoProviderMessage('codex', { antigravity: [],
       'claude-code': [],
       codex: [],
       pi: [snap('Cindy AI')],
@@ -521,6 +521,7 @@ function providerRoutingContext(
     'claude-code': partial['claude-code'] ?? [],
     codex: partial.codex ?? [],
     pi: partial.pi ?? [],
+    antigravity: partial.antigravity ?? [],
   };
   return {
     availability,
@@ -2023,7 +2024,7 @@ describe('OrcaWorkerCreationService', () => {
       const workerModel = workerAgent === 'codex' ? 'gpt-5.5' : 'claude-sonnet-4-6';
       const { deps, service } = createDeps({
         getWorkerPermissionMode: vi.fn(() => workerPermissionMode),
-        getProviderRoutingContext: vi.fn(async () => providerRoutingContext({
+        getProviderRoutingContext: vi.fn(async () => providerRoutingContext({ antigravity: [],
           'claude-code': [{ id: 'xd', name: 'XD Gateway', models: ['claude-sonnet-4-6'] }],
           codex: [{ id: 'xd', name: 'XD Gateway', models: ['gpt-5.5'] }],
           pi: [{ id: 'xd', name: 'XD Gateway', models: ['claude-sonnet-4-6'] }],
@@ -2368,7 +2369,7 @@ describe('OrcaWorkerCreationService', () => {
   });
 
   it('pins the sole runtime provider when only the worker model is explicit', async () => {
-    const availability = {
+    const availability = { antigravity: [],
       'claude-code': [],
       codex: [
         { id: 'custom-codex', name: 'Custom Codex', models: ['gpt-5.5'] },
@@ -2679,7 +2680,7 @@ describe('OrcaWorkerCreationService', () => {
 
 describe('buildNoProviderMessage', () => {
   it('suggests the other agent when it has a connected provider', () => {
-    const msg = buildNoProviderMessage('codex', {
+    const msg = buildNoProviderMessage('codex', { antigravity: [],
       'claude-code': [{ id: 'xd', name: 'XD Gateway', models: ['claude-sonnet-4-6'] }],
       pi: [],
       codex: [],
@@ -2690,7 +2691,7 @@ describe('buildNoProviderMessage', () => {
   });
 
   it('omits the agent suggestion when no agent has a connected provider', () => {
-    const msg = buildNoProviderMessage('claude-code', { 'claude-code': [], codex: [], pi: [] });
+    const msg = buildNoProviderMessage('claude-code', { antigravity: [], 'claude-code': [], codex: [], pi: [] });
     expect(msg).toContain('Claude Code 当前没有可用的模型供应商');
     expect(msg).toContain('设置 → 模型供应商');
     expect(msg).not.toContain('改用');
@@ -3122,7 +3123,7 @@ describe('SSH remote worker model/provider compatibility gate (R23 P2)', () => {
     // preflight 不再拒绝,直接进 bootstrap。
     const { service, deps } = createDeps({
       getLeadSessionRow: vi.fn(async () => remoteLeadRow),
-      getProviderRoutingContext: vi.fn(async () => providerRoutingContext({
+      getProviderRoutingContext: vi.fn(async () => providerRoutingContext({ antigravity: [],
         'claude-code': [],
         codex: [{ id: 'xd', name: 'XD Gateway', models: ['gpt-5.5'] }],
         pi: [{ id: 'xd', name: 'XD Gateway', models: ['claude-sonnet-4-6'] }],

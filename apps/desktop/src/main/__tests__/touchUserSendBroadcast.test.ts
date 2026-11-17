@@ -185,6 +185,7 @@ describe('cross-agent committed model projection', () => {
     }));
     const pending = createPendingAgentSwitchRegistry();
     const deps: MakerSessionAgentSwitchHandlerDeps = {
+      getAgentPermissionModes: () => ['ask', 'auto', 'acceptEdits', 'bypassPermissions'],
       pendingSwitches: pending,
       getSessionRow: async () => ({
         id, agentKind: String(h.route.row!.agentKind), model: String(h.route.row!.model),

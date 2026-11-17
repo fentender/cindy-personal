@@ -85,7 +85,7 @@ export interface MobileUsageWidgetSnapshot {
     days: string[];
     daily: MobileUsageWidgetDay[];
     /** Models with the most tokens in the window, in color order; absent from older desktops. */
-    models?: { name: string; harness: 'claude-code' | 'codex' | 'pi' }[];
+    models?: { name: string; harness: 'claude-code' | 'codex' | 'pi' | 'antigravity' }[];
   };
   /** Localized labels and templates from the desktop's menu bar strings. */
   strings: Record<string, string>;
@@ -351,7 +351,7 @@ export interface MobileCodexRateLimitResetResult {
 
 /** 下一条消息发送时才会应用的跨 Agent 切换意图。 */
 export interface MobileSessionAgentSwitchIntent {
-  targetAgentKind: 'claude-code' | 'codex' | 'pi';
+  targetAgentKind: 'claude-code' | 'codex' | 'pi' | 'antigravity';
   model: string;
   providerId: string | null;
   effort?: string;
@@ -361,7 +361,7 @@ export interface MobileSessionAgentSwitchIntent {
 /** desktop 登记 / 取消跨 Agent 意图后的稳定结果。 */
 export interface MobileSessionAgentSwitchResult {
   switched: boolean;
-  agentKind: 'claude-code' | 'codex' | 'pi';
+  agentKind: 'claude-code' | 'codex' | 'pi' | 'antigravity';
   model: string;
   engineReady: boolean;
   deferred?: boolean;
@@ -664,7 +664,7 @@ export function connectionIssueHint(kind: DeviceLinkConnectionIssueKind): string
  * 要给出可读提示只能按模板识别。formatRemoteError / throwIpcError 会给部分链路的
  * message 加 `[CODE] ` 头,识别时一并容忍。
  */
-const AGENT_NOT_AUTHENTICATED_RE = /^(?:\[[A-Z_]+\] )?(claude-code|codex|pi) not authenticated: ?(.*)$/;
+const AGENT_NOT_AUTHENTICATED_RE = /^(?:\[[A-Z_]+\] )?(claude-code|codex|pi|antigravity) not authenticated: ?(.*)$/;
 
 /**
  * agent 未鉴权错误 → 手机端直出文案(桌面端走 i18n,不用这组)。
@@ -677,7 +677,7 @@ export function describeAgentAuthError(error: string | null | undefined): string
   if (!error) return null;
   const matched = AGENT_NOT_AUTHENTICATED_RE.exec(error.trim());
   if (!matched) return null;
-  const agentLabel = matched[1] === 'claude-code' ? 'Claude' : matched[1] === 'pi' ? 'Pi' : 'Codex';
+  const agentLabel = matched[1] === 'claude-code' ? 'Claude' : matched[1] === 'pi' ? 'Pi' : matched[1] === 'antigravity' ? 'Antigravity' : 'Codex';
   const goSettings = `请在电脑端 ${BRAND_NAME} 的「设置 → 模型供应商」`;
   switch (matched[2]) {
     case 'no_key':

@@ -18,7 +18,7 @@ export type OrcaWorkerRolePermission = "auto" | "bypassPermissions";
 
 /** 手动选定并提交过的模型路线；agentDeviceId 为 null 表示 Agent 就在任务所在的电脑上。 */
 export interface OrcaWorkerRoleModel {
-  agent: "codex" | "claude-code" | "pi";
+  agent: "codex" | "claude-code" | "pi" | "antigravity";
   agentDeviceId: string | null;
   model: string;
   effort: string;
@@ -50,7 +50,8 @@ export interface OrcaWorkerDefaults {
   agent: OrcaWorkerRoleAgent;
   permission: OrcaWorkerRolePermission;
   /** 各 Agent 上次用的模型。 */
-  agents: Record<OrcaWorkerRoleAgent, OrcaWorkerAgentModel>;
+  // 旧宿主只发送前三个引擎；原生 Antigravity 偏好在新宿主上增量提供。
+  agents: Record<Exclude<OrcaWorkerRoleAgent, 'antigravity'>, OrcaWorkerAgentModel> & { antigravity?: OrcaWorkerAgentModel };
   /** 手动选定并提交过的完整路线；没有则缺省。 */
   model?: OrcaWorkerRoleModel;
 }
@@ -100,7 +101,7 @@ function id(value: unknown): string {
   return value;
 }
 
-const AGENTS: readonly OrcaWorkerRoleAgent[] = ["codex", "claude-code", "pi"];
+const AGENTS: readonly OrcaWorkerRoleAgent[] = ["codex", "claude-code", "pi", "antigravity"];
 
 function agentKind(value: unknown): OrcaWorkerRoleAgent {
   if (!AGENTS.includes(value as OrcaWorkerRoleAgent)) throw new Error("Invalid worker role model");
@@ -143,6 +144,7 @@ function parseDefaults(value: unknown): OrcaWorkerDefaults {
       codex: parseAgentModel(agents.codex),
       "claude-code": parseAgentModel(agents["claude-code"]),
       pi: parseAgentModel(agents.pi),
+      ...(agents.antigravity === undefined ? {} : { antigravity: parseAgentModel(agents.antigravity) }),
     },
     ...(raw.model === undefined || raw.model === null ? {} : { model: parseModel(raw.model) }),
   };

@@ -249,6 +249,17 @@ it('retains an explicitly saved imported connection when composing an invocation
 });
 
 describe('resolveModelInvocation — 六元组回落链', () => {
+  // 原生来源必须保留引擎与账号，不能被当成未知引擎回落到默认订阅。
+  it('keeps an explicitly selected Antigravity subscription invocation', () => {
+    const native = { id: 'antigravity', name: 'Antigravity', connected: true,
+      agents: ['antigravity'], routing: { antigravity: {} },
+      models: { antigravity: [model('gemini-4-argon')] }, access: { kind: 'subscription' },
+    } as ProviderView;
+    const result = resolveModelInvocation({ agentKind: 'antigravity', model: 'gemini-4-argon',
+      providerId: 'antigravity', permissionMode: 'auto' }, SCENARIO, ctx({ providers: [...providers(), native] }));
+    expect(result).toMatchObject({ agentKind: 'antigravity', model: 'gemini-4-argon',
+      providerId: 'antigravity', permissionMode: 'auto', fallbacksApplied: [] });
+  });
   it('keeps an explicit Pi invocation instead of falling back to the scenario agent', () => {
     const r = resolveModelInvocation(
       { agentKind: 'pi', model: 'pi-model', permissionMode: 'auto' },

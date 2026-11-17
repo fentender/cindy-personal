@@ -1,10 +1,37 @@
 import { execFileSync, spawn } from 'node:child_process';
 import { existsSync, readdirSync } from 'node:fs';
 import { win32 as win32Path } from 'node:path';
+import configPlugins from 'expo/config-plugins';
 
 export const DEFAULT_ANDROID_AVD = 'cindy-api36';
 const DEFAULT_BOOT_TIMEOUT_MS = 180_000;
 const DEFAULT_POLL_INTERVAL_MS = 1_000;
+
+/** 调试应用停止后，将 Metro 地址接到已建立的 ADB reverse，保留其它偏好。 */
+export async function configureAndroidDebugMetro({ adb, serial, packageName, port, run = execFileSync }) {
+  if (!/^[A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z][A-Za-z0-9_]*)+$/.test(packageName)) {
+    throw new Error(`无效的 Android package: ${packageName}`);
+  }
+  const target = ['-s', serial, 'shell', 'run-as', packageName];
+  const options = { encoding: 'utf8', windowsHide: true };
+  const fileName = `${packageName}_preferences.xml`;
+  run(adb, [...target, 'mkdir', '-p', 'shared_prefs'], options);
+  const files = run(adb, [...target, 'ls', 'shared_prefs'], options).trim().split(/\s+/);
+  const preferences = files.includes(fileName)
+    ? await configPlugins.XML.parseXMLAsync(run(adb, [...target, 'cat', `shared_prefs/${fileName}`], options))
+    : { map: {} };
+  if (preferences.map === '') preferences.map = {};
+  if (!preferences.map || typeof preferences.map !== 'object') throw new Error('Android 偏好文件缺少 map 根元素');
+  preferences.map.string = [
+    ...(preferences.map.string ?? []).filter((entry) => entry.$.name !== 'debug_http_host'),
+    { $: { name: 'debug_http_host' }, _: `127.0.0.1:${port}` },
+  ];
+  // adb shell 会重新解析参数；包名已限制为 Android 标识符，固定路径作为完整命令引用。
+  run(adb, [...target, 'sh', '-c', `'cat > shared_prefs/${fileName}'`], {
+    ...options,
+    input: configPlugins.XML.format(preferences),
+  });
+}
 
 /**
  * 提取 Windows Android 模拟器参数，避免把本地工具参数透传给 Expo。

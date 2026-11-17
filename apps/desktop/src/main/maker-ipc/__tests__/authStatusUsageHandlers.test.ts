@@ -61,15 +61,15 @@ describe('maker auth IPC handlers', () => {
     expect(getAgentAuthState).toHaveBeenCalledWith('codex');
   });
 
-  it('accepts Pi at the auth IPC boundary exposed by preload', async () => {
+  it.each(['pi', 'antigravity'])('accepts %s at the auth IPC boundary exposed by preload', async (agent) => {
     const harness = new IpcHarness();
     const getAgentAuthState = vi.fn().mockResolvedValue({ authenticated: true });
     registerMakerAuthHandlers(harness, createMakerStub({ getAgentAuthState }), vi.fn(), () => null);
 
-    await expect(harness.invoke(MAKER_INVOKE.AUTH_GET_STATE, 'pi')).resolves.toEqual({
+    await expect(harness.invoke(MAKER_INVOKE.AUTH_GET_STATE, agent)).resolves.toEqual({
       authenticated: true,
     });
-    expect(getAgentAuthState).toHaveBeenCalledWith('pi');
+    expect(getAgentAuthState).toHaveBeenCalledWith(agent);
   });
 
   it('normalizes login progress and broadcasts final auth state', async () => {
@@ -358,6 +358,21 @@ describe('maker auth IPC handlers', () => {
     });
   });
 
+  it.each(['codex', 'antigravity'] as const)('disconnects a successful %s receipt superseded before handler finalization', async (kind) => {
+    const harness = new IpcHarness();
+    let finish!: (state: AuthState) => void;
+    const triggerAgentLogin = vi.fn(() => new Promise<AuthState>(resolve => { finish = resolve; }));
+    const logoutAgent = vi.fn(async () => undefined);
+    registerMakerAuthHandlers(harness, createMakerStub({ triggerAgentLogin, logoutAgent, cancelAgentLogin: vi.fn() }), vi.fn(), () => null);
+    const login = harness.invoke(MAKER_INVOKE.AUTH_TRIGGER_LOGIN, kind);
+    await vi.waitFor(() => expect(triggerAgentLogin).toHaveBeenCalledOnce());
+    finish({ authenticated: true, authSource: 'oauth' });
+    const cancellation = harness.invoke(MAKER_INVOKE.AUTH_CANCEL_LOGIN, kind);
+    await expect(login).resolves.toMatchObject({ authenticated: false, errorReason: 'login_cancelled' });
+    await cancellation;
+    expect(logoutAgent).toHaveBeenCalledExactlyOnceWith(kind);
+  });
+
   it('preserves cancellation while invalidating post-login refresh work', async () => {
     const harness = new IpcHarness();
     const broadcast = vi.fn();
@@ -532,7 +547,7 @@ describe('maker auth IPC handlers', () => {
     expect(broadcast).not.toHaveBeenCalled();
   });
 
-  it('keeps a shared login alive until the last BrowserWindow owner releases it', async () => {
+  it.each(['codex', 'antigravity'] as const)('keeps a shared %s login alive until the last BrowserWindow owner releases it', async (agentKind) => {
     const harness = new IpcHarness();
     const broadcast = vi.fn();
     const cancelAgentLogin = vi.fn();
@@ -551,37 +566,37 @@ describe('maker auth IPC handlers', () => {
       onCodexAuthChange,
     );
 
-    const first = harness.invokeFrom(101, MAKER_INVOKE.AUTH_TRIGGER_LOGIN, 'codex', {
+    const first = harness.invokeFrom(101, MAKER_INVOKE.AUTH_TRIGGER_LOGIN, agentKind, {
       ownerId: 'window-101-operation-1',
     });
     await vi.waitFor(() => expect(triggerAgentLogin).toHaveBeenCalledOnce());
-    const second = harness.invokeFrom(202, MAKER_INVOKE.AUTH_TRIGGER_LOGIN, 'codex', {
+    const second = harness.invokeFrom(202, MAKER_INVOKE.AUTH_TRIGGER_LOGIN, agentKind, {
       ownerId: 'window-202-operation-1',
     });
     await Promise.resolve();
     expect(triggerAgentLogin).toHaveBeenCalledOnce();
 
     await expect(
-      harness.invokeFrom(101, MAKER_INVOKE.AUTH_CANCEL_LOGIN, 'codex', {
+      harness.invokeFrom(101, MAKER_INVOKE.AUTH_CANCEL_LOGIN, agentKind, {
         releaseOwner: true,
         ownerId: 'window-101-operation-1',
       }),
     ).resolves.toBeUndefined();
     expect(cancelAgentLogin).not.toHaveBeenCalled();
     await expect(
-      harness.invokeFrom(101, MAKER_INVOKE.AUTH_CANCEL_LOGIN, 'codex', {
+      harness.invokeFrom(101, MAKER_INVOKE.AUTH_CANCEL_LOGIN, agentKind, {
         releaseOwner: true,
         ownerId: 'window-101-operation-1',
       }),
     ).resolves.toBeUndefined();
     expect(cancelAgentLogin).not.toHaveBeenCalled();
 
-    const lastRelease = harness.invokeFrom(202, MAKER_INVOKE.AUTH_CANCEL_LOGIN, 'codex', {
+    const lastRelease = harness.invokeFrom(202, MAKER_INVOKE.AUTH_CANCEL_LOGIN, agentKind, {
       releaseOwner: true,
       ownerId: 'window-202-operation-1',
     });
     await vi.waitFor(() => expect(cancelAgentLogin).toHaveBeenCalledOnce());
-    expect(cancelAgentLogin).toHaveBeenCalledWith('codex');
+    expect(cancelAgentLogin).toHaveBeenCalledWith(agentKind);
 
     finishLogin({ authenticated: false, errorReason: 'login_cancelled' });
     await expect(first).resolves.toEqual({
@@ -593,10 +608,10 @@ describe('maker auth IPC handlers', () => {
       errorReason: 'login_cancelled',
     });
     await expect(lastRelease).resolves.toBeUndefined();
-    expect(onCodexAuthChange).toHaveBeenCalledOnce();
+    expect(onCodexAuthChange).toHaveBeenCalledTimes(agentKind === 'codex' ? 1 : 0);
     expect(broadcast).toHaveBeenCalledOnce();
     expect(broadcast).toHaveBeenCalledWith(MAKER_PUSH.AUTH_STATE_CHANGED, {
-      agentKind: 'codex',
+      agentKind,
       authenticated: false,
       errorReason: 'login_cancelled',
     });

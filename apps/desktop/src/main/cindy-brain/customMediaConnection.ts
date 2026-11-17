@@ -73,6 +73,7 @@ export function resolveCustomMediaConnection(
   const model = provider.models[agent]?.find((model) => model.id === modelId);
   if (
     !route ||
+    route.transport === 'acp' ||
     route.disabled ||
     (!guideDriven && (kind === 'image' ? route.imageApi !== 'openai-images' : !route.videoApi)) ||
     !model ||

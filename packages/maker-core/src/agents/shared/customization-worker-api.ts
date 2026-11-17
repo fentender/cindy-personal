@@ -3,3 +3,4 @@
 export { scanClaudeCustomizations } from '../claude-code/customization-scanner.js';
 export { scanCodexCustomizations } from '../codex/customization-scanner.js';
 export { scanPiCustomizations } from '../pi/customization-scanner.js';
+export { scanAntigravityCustomizations } from '../antigravity/customization-scanner.js';

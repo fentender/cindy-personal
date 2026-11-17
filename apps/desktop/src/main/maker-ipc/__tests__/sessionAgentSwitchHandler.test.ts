@@ -42,6 +42,7 @@ function makeDeps(overrides: Partial<MakerSessionAgentSwitchHandlerDeps> = {}): 
 } {
   const calls: string[] = [];
   const deps: MakerSessionAgentSwitchHandlerDeps = {
+    getAgentPermissionModes: vi.fn(() => ['ask', 'auto', 'acceptEdits', 'bypassPermissions']),
     confirmNativeHistoryFallback: vi.fn(async () => true),
     getSessionRow: vi.fn(async () => makeRow()),
     getLiveSession: vi.fn(() => ({ isTurnRunning: () => false })),
@@ -84,6 +85,50 @@ const validParams = {
   model: 'gpt-5.5',
   providerId: null,
 };
+
+it.each([false, true])('rejects an unsupported target permission before handoff (applyNow=%s)', async (applyNow) => {
+  const { deps } = makeDeps({
+    getSessionRow: vi.fn(async () => makeRow({ agentKind: 'pi', permissionMode: 'bypassPermissions' })),
+    getAgentPermissionModes: vi.fn(() => ['ask', 'auto', 'acceptEdits']),
+  });
+  await expect(performSessionAgentSwitch(deps, {
+    sessionId: 's1', targetAgentKind: 'antigravity', model: 'gemini-4-argon', applyNow,
+  })).rejects.toThrow(/permission mode.*bypassPermissions/i);
+  expect(deps.closeSession).not.toHaveBeenCalled();
+  expect(deps.applyAgentSwitchToDb).not.toHaveBeenCalled();
+  expect(deps.insertBoundaryMessage).not.toHaveBeenCalled();
+});
+
+// 原生 Antigravity 接入，unit：同一任务的切换、停泊和回切必须保留正确的引擎身份。
+// 现有三引擎用例无法暴露未知值被归为 Claude；最小输入是 Pi → Antigravity → Pi。
+it('hands a Pi task to Antigravity and restores the parked Pi session on return', async () => {
+  let row = makeRow({ agentKind: 'pi', model: 'gemini-4-argon-high', providerId: 'proxy', sdkSessionId: 'pi-original' });
+  const parked = new Map<string, string>();
+  const boundaries: Array<{ fromAgentKind: string; toAgentKind: string; fromSdkSessionId: string | null; handoff: string; resumed?: boolean }> = [];
+  const { deps } = makeDeps({
+    getSessionRow: async () => ({ ...row }),
+    findParkedEngineSession: async (_id, kind) => {
+      const sdkSessionId = parked.get(kind);
+      return sdkSessionId ? { sdkSessionId, watermarkCreatedAt: 0, watermarkRowid: 0 } : null;
+    },
+    applyAgentSwitchToDb: async (_id, patch) => { row = { ...row, ...patch, providerId: patch.providerId ?? null }; },
+    insertBoundaryMessage: async (_id, boundary) => {
+      if (boundary.fromSdkSessionId) parked.set(boundary.fromAgentKind, boundary.fromSdkSessionId);
+      boundaries.push(boundary);
+      return `boundary-${boundaries.length}`;
+    },
+    bootstrapSwitchedSession: async () => { row.sdkSessionId ??= 'agy-native'; },
+  });
+  await expect(performSessionAgentSwitch(deps, { sessionId: 's1', targetAgentKind: 'antigravity',
+    model: 'gemini-4-argon', providerId: 'antigravity', applyNow: true })).resolves.toMatchObject({ switched: true, engineReady: true });
+  expect(row).toMatchObject({ id: 's1', agentKind: 'antigravity', sdkSessionId: 'agy-native' });
+  expect(boundaries[0]).toMatchObject({ fromAgentKind: 'pi', toAgentKind: 'antigravity', fromSdkSessionId: 'pi-original' });
+  expect(boundaries[0].handoff).toContain('Antigravity');
+  expect(boundaries[0].handoff).toContain('你好');
+  await performSessionAgentSwitch(deps, { sessionId: 's1', targetAgentKind: 'pi', model: 'gemini-4-argon-high', providerId: 'proxy', applyNow: true });
+  expect(row).toMatchObject({ id: 's1', agentKind: 'pi', sdkSessionId: 'pi-original' });
+  expect(boundaries[1]).toMatchObject({ fromAgentKind: 'antigravity', toAgentKind: 'pi', fromSdkSessionId: 'agy-native', resumed: true });
+});
 
 // #10893, unit: same-device group members are distinct provider connections.
 // The old same-engine no-op retained the old provider/native session. Exercise

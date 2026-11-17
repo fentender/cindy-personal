@@ -1,6 +1,6 @@
 /** Worker 面板按账号和任务所在电脑提交过的完整路线。 */
 export interface WorkerCreationSelection {
-  agent: 'claude-code' | 'codex' | 'pi';
+  agent: 'claude-code' | 'codex' | 'pi' | 'antigravity';
   model: string;
   providerId: string | null;
   agentDeviceId: string | null;
@@ -17,7 +17,7 @@ export function normalizeWorkerCreationSelection(raw: unknown): WorkerCreationSe
     v.length <= limit &&
     Array.from(v).every((character) => character.charCodeAt(0) >= 32);
   if (
-    !['claude-code', 'codex', 'pi'].includes(p.agent ?? '') ||
+    !['claude-code', 'codex', 'pi', 'antigravity'].includes(p.agent ?? '') ||
     !text(p.model, 1024) ||
     typeof p.effort !== 'string' ||
     p.effort.length > 32 ||

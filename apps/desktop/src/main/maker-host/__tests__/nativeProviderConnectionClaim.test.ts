@@ -13,6 +13,7 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BUNDLED_CATALOG, type Catalog } from '@cindy/model-providers';
+vi.mock('../antigravity-host.js', () => ({ nativeAntigravityHost: { readConnection: async () => false } }));
 
 const h = vi.hoisted(() => ({
   userDataDir: '',

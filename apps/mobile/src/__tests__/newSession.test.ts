@@ -1521,7 +1521,7 @@ describe('new session model', () => {
 
   it('exposes Pi as a first-class agent and preserves Fast for Pi sessions', () => {
     expect(NEW_SESSION_AGENT_OPTIONS.map((option) => option.kind)).toEqual([
-      'claude-code', 'codex', 'pi',
+      'claude-code', 'codex', 'pi', 'antigravity',
     ]);
     const pi = withAgentDefaults({ ...DRAFT_WITH_MODEL, fastMode: true }, 'pi');
     expect(pi).toMatchObject({ agentKind: 'pi', model: '', fastMode: true });
@@ -1535,7 +1535,7 @@ describe('new session model', () => {
   it('filters the new-session agent options by the controlled device runtime-registered set', () => {
     // null(未拉到)→ fail-open,全部保留。
     expect(availableNewSessionAgentOptions(null).map((o) => o.kind)).toEqual([
-      'claude-code', 'codex', 'pi',
+      'claude-code', 'codex', 'pi', 'antigravity',
     ]);
     // 被控端无 Pi(二进制缺失)→ 隐藏 Pi,避免建出 requireAgent 报 not-registered 的会话。
     expect(
@@ -1543,6 +1543,7 @@ describe('new session model', () => {
     ).toEqual(['claude-code', 'codex']);
     // 只有 Pi 注册(理论)→ 只留 Pi。
     expect(availableNewSessionAgentOptions(new Set(['pi'])).map((o) => o.kind)).toEqual(['pi']);
+    expect(availableNewSessionAgentOptions(new Set(['antigravity'])).map((o) => o.kind)).toEqual(['antigravity']);
     // 空集(被控端异常)→ 退回至少 Claude,不把入口清空到无法创建。
     expect(availableNewSessionAgentOptions(new Set()).map((o) => o.kind)).toEqual(['claude-code']);
   });

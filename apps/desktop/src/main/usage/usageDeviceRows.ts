@@ -122,7 +122,7 @@ function finiteNonNegative(value: unknown): number {
 }
 
 function isAgentKind(value: unknown): value is DailyModelUsageRow['agentKind'] {
-  return value === 'claude-code' || value === 'codex' || value === 'pi' || value === 'media';
+  return value === 'claude-code' || value === 'codex' || value === 'pi' || value === 'antigravity' || value === 'media';
 }
 
 /** 控制端和缓存共用的逐行校验:远端 / 磁盘数据一律当不可信输入。 */

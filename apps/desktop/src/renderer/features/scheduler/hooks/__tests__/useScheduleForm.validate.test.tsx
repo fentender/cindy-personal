@@ -6,8 +6,34 @@ import type { Schedule, ScheduleTemplate } from '@cindy/maker-scheduler';
 import type { ProviderView } from '@cindy/model-providers';
 import type { Session } from '@/lib/ccAgent.types';
 
-import { useScheduleForm } from '../useScheduleForm';
+import { useScheduleForm, rememberScheduleFormPrefs } from '../useScheduleForm';
 import { formToProjectConfig } from '../../lib/projectAutomationConfig';
+
+// 原生引擎的自动化偏好必须经真实表单恢复，不能回落成 Claude；unit，IPC 无关。
+it('restores the native Antigravity route after reopening a schedule form', () => {
+  const storageKey = 'xdt:scheduleFormPrefs:v1';
+  const previous = localStorage.getItem(storageKey);
+  const view = renderHook(() => useScheduleForm(null));
+  try {
+    act(() => {
+      view.result.current.setField('agentKind', 'antigravity');
+      view.result.current.setField('model', 'gemini-4-argon');
+      view.result.current.setField('providerId', 'antigravity');
+      view.result.current.setField('effort', 'high');
+    });
+    rememberScheduleFormPrefs(view.result.current.form);
+    const reopened = renderHook(() => useScheduleForm(null));
+    try {
+      expect(reopened.result.current.toInput()).toMatchObject({
+        agentKind: 'antigravity', model: 'gemini-4-argon', providerId: 'antigravity', effort: 'high',
+      });
+    } finally { reopened.unmount(); }
+  } finally {
+    view.unmount();
+    if (previous === null) localStorage.removeItem(storageKey);
+    else localStorage.setItem(storageKey, previous);
+  }
+});
 
 // Issue 8886 / unit: edit initialization, validation and clear must survive the real hook.
 it('restores the saved deadline and validates edits before saving', () => {

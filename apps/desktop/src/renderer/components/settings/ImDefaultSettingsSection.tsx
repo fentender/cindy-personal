@@ -41,13 +41,13 @@ import { DefaultOverrideControls } from './DefaultOverrideControls';
 import { Button } from '@/components/ui/button';
 import { buildAgentSettingsPatch, mergeSettingsPatch } from './imDefaultSettingsLogic';
 
-function vendorKeyFor(agentKind: ImDefaultAgentKind): 'cc' | 'codex' | 'pi' {
+function vendorKeyFor(agentKind: ImDefaultAgentKind): 'cc' | 'codex' | 'pi' | 'antigravity' {
   return agentKind === 'claude-code' ? 'cc' : agentKind;
 }
 
 /** AgentSelect 的 vendor → IM 默认配置的 agentKind。 */
 function agentKindOfVendor(vendor: string): ImDefaultAgentKind {
-  return vendor === 'cc' ? 'claude-code' : vendor === 'pi' ? 'pi' : 'codex';
+  return vendor === 'cc' ? 'claude-code' : vendor === 'pi' ? 'pi' : vendor === 'antigravity' ? 'antigravity' : 'codex';
 }
 
 export interface ImDefaultSettingsSummary {
@@ -86,6 +86,7 @@ export function ImDefaultSettingsSection({
   const cc = useAgentCapabilities('claude-code', agentDeviceId ?? undefined);
   const codex = useAgentCapabilities('codex', agentDeviceId ?? undefined);
   const pi = useAgentCapabilities('pi', agentDeviceId ?? undefined);
+  const antigravity = useAgentCapabilities('antigravity', agentDeviceId ?? undefined);
   const routeDevices = useModelRouteDevices({ controlledDeviceId: null, leadAgentDeviceId: agentDeviceId });
 
   const pickerAgents = useModelPickerAgents(settings?.agentKind ?? 'claude-code', agentDeviceId);
@@ -128,6 +129,7 @@ export function ImDefaultSettingsSection({
       }),
       codex: deriveModelsFromProviders(providers, 'codex', { admissionFiltered: true }),
       pi: deriveModelsFromProviders(providers, 'pi', { admissionFiltered: true }),
+      antigravity: deriveModelsFromProviders(providers, 'antigravity', { admissionFiltered: true }),
     };
     return {
       'claude-code': fromProviders['claude-code'].length
@@ -137,8 +139,9 @@ export function ImDefaultSettingsSection({
         ? fromProviders.codex
         : (codex.capabilities?.availableModels ?? []),
       pi: fromProviders.pi.length ? fromProviders.pi : (pi.capabilities?.availableModels ?? []),
+      antigravity: fromProviders.antigravity.length ? fromProviders.antigravity : (antigravity.capabilities?.availableModels ?? []),
     };
-  }, [providers, cc.capabilities, codex.capabilities, pi.capabilities]);
+  }, [providers, cc.capabilities, codex.capabilities, pi.capabilities, antigravity.capabilities]);
 
   const resolveProviderId = useCallback(
     (agentKind: ImDefaultAgentKind, modelId: string, providerId: string | null): string | null => {

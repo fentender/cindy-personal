@@ -28,7 +28,7 @@ interface StubModel {
 }
 
 /** pi 也是一个 vendor;缺省的 agent 一律回落空清单。 */
-type StubByAgent = Partial<Record<'claude-code' | 'codex' | 'pi', StubModel[]>>;
+type StubByAgent = Partial<Record<'claude-code' | 'codex' | 'pi' | 'antigravity', StubModel[]>>;
 
 function model(id: string, over: Partial<StubModel> = {}): StubModel {
   return {
@@ -42,7 +42,7 @@ function model(id: string, over: Partial<StubModel> = {}): StubModel {
 }
 
 function stubCapabilities(byAgent: StubByAgent): void {
-  const getCapabilities = vi.fn(async (kind: 'claude-code' | 'codex' | 'pi') => ({
+  const getCapabilities = vi.fn(async (kind: 'claude-code' | 'codex' | 'pi' | 'antigravity') => ({
     availableModels: byAgent[kind] ?? [],
     hasFastMode: false,
     effortLevels: [],
@@ -60,6 +60,17 @@ async function loadWith(byAgent: StubByAgent) {
 }
 
 describe('getDefaultModelForVendor', () => {
+  // unit：ACP 目录没有窗口上限时仍应可选，不能被过滤或误读 Claude 的能力缓存。
+  it('uses the discovered native Antigravity model without guessing a context window', async () => {
+    const md = await loadWith({
+      'claude-code': [model('claude-default')],
+      antigravity: [model('native-model', { contextWindow: 0 })],
+    });
+    expect(md.getDefaultModelForVendor('antigravity')).toMatchObject({
+      id: 'native-model', vendorKey: 'antigravity', contextWindow: 0,
+    });
+    expect(md.coldStartModelIdForVendor('antigravity')).toBe('');
+  });
   it('取 sortOrder 最小的模型，而不是清单里排前面的', async () => {
     const md = await loadWith({
       'claude-code': [

@@ -1,4 +1,5 @@
 import { useRemoteProviderDisable } from '@/lib/remoteProviderDisable';
+import { createLogger } from '@/lib/logger';
 import { Select } from '@/components/ui/select';
 import { sameRunLocationProvider, duplicateSubscriptionProviders, subscriptionModelsCoveredBy } from '@cindy/model-providers';
 import { isProviderLogoKind } from '@cindy/model-providers/branding';
@@ -451,7 +452,7 @@ function supportsBuiltinConnectionManagement(provider: ProviderView): boolean {
     provider.id !== 'xd' &&
     // A provider created for subscription accounts is managed through its accounts (2026-11-13).
     !provider.subscriptionPool &&
-    (['openai', 'anthropic', 'xai'].includes(provider.id) ||
+    (['openai', 'anthropic', 'xai', 'antigravity'].includes(provider.id) ||
       (provider.auth.method === 'oauth' && !!provider.auth.oauth) ||
       (provider.auth.method === 'apiKey' && isBuiltinApiKeyProviderId(provider.id)))
   );
@@ -499,6 +500,7 @@ async function disconnectProvider(
       ...scope,
     });
     if (provider.id === 'openai') await window.electronAPI.maker.auth.logout('codex', scope);
+    else if (provider.id === 'antigravity') await window.electronAPI.maker.auth.logout('antigravity', scope);
     else if (provider.id === 'anthropic') await window.electronAPI.maker.claudeOAuthLogout(scope);
     else if (provider.id === 'xai') await window.electronAPI.maker.xaiOAuthLogout(scope);
     else if (provider.auth.method === 'oauth')
@@ -744,7 +746,9 @@ function DetailHeader({
           agent:
             provider.agents[0] === 'claude-code'
               ? 'Claude Code'
-              : provider.agents[0] === 'pi'
+              : provider.agents[0] === 'antigravity'
+                ? 'Antigravity'
+                : provider.agents[0] === 'pi'
                 ? 'Pi'
                 : 'Codex',
         })
@@ -1103,6 +1107,94 @@ function CreatedSubscriptionHeader({ provider, kind, onChanged, children }: {
     subtitle={t('subscriptionAccounts.title')}
     status={{ kind: connected ? 'connected' : 'neutral', label: t('settings.providers.pill.disconnected') }}
     deleteAction={busy ? undefined : { label: t('settings.providers.custom.deleteAria'), onClick: () => void remove() }} />;
+}
+
+function AntigravityHeader({ provider, onChanged, children }: {
+  provider: ProviderView;
+  onChanged: () => void;
+  children: ReactNode;
+}) {
+  const { t } = useTranslation();
+  const { confirm } = useConfirmDialog();
+  const [loggingIn, setLoggingIn] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
+  const loginOwner = useRef<string | null>(null);
+
+  const releaseLogin = useCallback(async () => {
+    const ownerId = loginOwner.current;
+    if (!ownerId) return;
+    loginOwner.current = null;
+    await window.electronAPI.maker.auth.cancelLogin('antigravity', { releaseOwner: true, ownerId });
+  }, []);
+  useEffect(() => () => {
+    void releaseLogin().catch(error => createLogger('AntigravityAuth').warn('Failed to release login owner', error));
+  }, [releaseLogin]);
+
+  const connect = async () => {
+    const ownerId = crypto.randomUUID();
+    loginOwner.current = ownerId;
+    setLoggingIn(true);
+    try {
+      const result = await window.electronAPI.maker.auth.triggerLogin('antigravity', { ownerId });
+      // 取消或离开页面后，旧登录回执不再更新当前操作。
+      if (loginOwner.current !== ownerId) return;
+      if (result.authenticated) {
+        toast.success(t('settings.providers.genericOAuth.toast.loggedIn', { name: provider.name }));
+        onChanged();
+      } else if (result.errorReason !== 'login_cancelled') {
+        toast.error(t('settings.providers.genericOAuth.toast.loginFailed', { name: provider.name }));
+      }
+    } catch {
+      if (loginOwner.current === ownerId)
+        toast.error(t('settings.providers.genericOAuth.toast.loginFailed', { name: provider.name }));
+    } finally {
+      if (loginOwner.current === ownerId) {
+        loginOwner.current = null;
+        setLoggingIn(false);
+      }
+    }
+  };
+
+  const disconnect = async () => {
+    try {
+      const scope = await window.electronAPI.maker.listProviders();
+      if (!await confirm({
+        title: t('settings.providers.genericOAuth.logoutConfirm.title', { name: provider.name }),
+        description: t('settings.providers.genericOAuth.logoutConfirm.description', { name: provider.name }),
+        confirmText: t('settings.providers.genericOAuth.logoutConfirm.confirm'),
+        cancelText: t('settings.providers.genericOAuth.logoutConfirm.cancel'),
+      })) return;
+      setDisconnecting(true);
+      await disconnectProvider(provider, scope);
+      onChanged();
+    } catch {
+      toast.error(t('settings.providers.genericOAuth.toast.logoutFailed', { name: provider.name }));
+    } finally {
+      setDisconnecting(false);
+    }
+  };
+
+  return <DetailHeader
+    provider={provider}
+    title={provider.name}
+    icon={providerIcon(provider, 18)}
+    subtitle={providerSubtitleForDisplay(provider, '')}
+    status={{ kind: provider.connected ? 'connected' : 'neutral',
+      label: t(loggingIn ? 'settings.providers.pill.connecting' : 'settings.providers.pill.disconnected') }}
+    primaryAction={{
+      label: t(provider.connected ? 'settings.providers.button.disconnect'
+        : loggingIn ? 'settings.providers.button.cancel' : 'settings.providers.button.authorize'),
+      disabled: disconnecting,
+      onClick: () => {
+        if (provider.connected) void disconnect();
+        else if (loggingIn) {
+          void releaseLogin().catch(() => toast.error(t('settings.providers.genericOAuth.toast.loginFailed', { name: provider.name })));
+          setLoggingIn(false);
+        }
+        else void connect();
+      },
+    }}
+  >{children}</DetailHeader>;
 }
 
 function AnthropicHeader({
@@ -3164,6 +3256,7 @@ export function ProvidersSection() {
         const refreshedAgents = new Set<AgentKind>();
         const batch = await fetchCustomProviderModelsForRefresh(p, config);
         for (const agent of p.agents) {
+          if (agent === 'antigravity') continue;
           const rt = config.runtimes[agent];
           if (!rt?.baseUrl) continue;
           const authMethod =
@@ -3295,6 +3388,8 @@ export function ProvidersSection() {
     if (p.id === 'openai')
       return <NativeSubscriptionHeader key={p.id} children={children} provider={p} providerId="openai" onChanged={refetch} onPoolConnectionChange={onOpenaiPoolConnectionChange} />;
     if (p.id === 'xai') return <XaiHeader children={children} provider={p} onChanged={refetch} />;
+    if (p.id === 'antigravity' && p.source === 'builtin')
+      return <AntigravityHeader key={p.id} children={children} provider={p} onChanged={refetch} />;
     // Created subscription providers copy their built-in's fields; never treat them as that connection.
     if (p.subscriptionPool)
       return <CreatedSubscriptionHeader key={p.id} children={children} provider={p} kind={p.subscriptionPool} onChanged={refetch} />;

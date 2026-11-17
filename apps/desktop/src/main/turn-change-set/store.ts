@@ -85,7 +85,7 @@ interface TurnChangeActionStateV1 {
   states: Record<string, { workspaceState: TurnChangeWorkspaceState; updatedAt: number }>;
 }
 
-const PROVIDERS = new Set<TurnChangeProvider>(['codex', 'claude-code', 'pi']);
+const PROVIDERS = new Set<TurnChangeProvider>(['codex', 'claude-code', 'pi', 'antigravity']);
 const STATES = new Set<TurnChangeSetState>(['complete', 'partial']);
 const WORKSPACE_STATES = new Set<TurnChangeWorkspaceState>(['applied', 'undone']);
 const INCOMPLETE_REASONS = new Set<TurnChangeIncompleteReason>([
@@ -982,12 +982,12 @@ export function noteOpaqueTurnChange(input: OpaqueTurnChangeCapture): void {
 
 export function noteTurnDiffEvent(sessionId: string, event: AgentEvent, remote = false): void {
   if (remote) return;
-  if (event.type !== 'turn_diff' || event.source !== 'codex') return;
+  if (event.type !== 'turn_diff' || (event.source !== 'codex' && event.source !== 'antigravity')) return;
   const data = event.data as Partial<TurnDiffEventData> | null;
   if (!data || typeof data.turnId !== 'string' || typeof data.diff !== 'string' || typeof data.cwd !== 'string') {
     return;
   }
-  const pending = ensurePending(sessionId, 'codex', data.cwd);
+  const pending = ensurePending(sessionId, event.source, data.cwd);
   if (pending.providerTurnId && pending.providerTurnId !== data.turnId) return;
   pending.providerTurnId = data.turnId;
   if (data.isComplete === false) addIncompleteReason(pending, 'provider-diff-conflict');

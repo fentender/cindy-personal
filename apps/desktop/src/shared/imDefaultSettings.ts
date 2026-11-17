@@ -1,4 +1,4 @@
-export type ImDefaultAgentKind = 'claude-code' | 'codex' | 'pi';
+export type ImDefaultAgentKind = 'claude-code' | 'codex' | 'pi' | 'antigravity';
 export type ImDefaultPermissionMode =
   'ask' | 'default' | 'acceptEdits' | 'plan' | 'auto' | 'bypassPermissions';
 export type ImDefaultEffort = 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' | 'max' | 'ultra';
@@ -76,6 +76,11 @@ export const IM_DEFAULT_SETTINGS: ImDefaultSettings = {
       model: '',
       effort: 'high',
     },
+    antigravity: {
+      providerId: null,
+      model: '',
+      effort: 'high',
+    },
   },
 };
 
@@ -95,7 +100,7 @@ export const IM_DEFAULT_EFFORT_OVERRIDES: Readonly<Partial<Record<string, ImDefa
   'codex/gpt-5.5': 'high',
 };
 
-const AGENT_KINDS = new Set<ImDefaultAgentKind>(['claude-code', 'codex', 'pi']);
+const AGENT_KINDS = new Set<ImDefaultAgentKind>(['claude-code', 'codex', 'pi', 'antigravity']);
 const EFFORTS = new Set<ImDefaultEffort>([
   'minimal',
   'low',

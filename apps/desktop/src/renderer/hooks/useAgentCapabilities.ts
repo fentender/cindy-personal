@@ -20,12 +20,12 @@ import type { Effort, PermissionMode } from '@/lib/userPreferences.types';
 
 const log = createLogger('useAgentCapabilities');
 
-export type AgentKind = 'claude-code' | 'codex' | 'pi';
+export type AgentKind = 'claude-code' | 'codex' | 'pi' | 'antigravity';
 
 // capability 生命周期(预取 / 驱逐通知 / 本地快照刷新 / 启动预载)必须覆盖全部 agent，
 // 少一个就会让该 agent 的远程会话在断链或 provider revision 后收不到 loading 事件、
 // 也不再被重新预取，界面永久停在旧模型/能力快照(codex review)。新增 agent 只改这里。
-const ALL_AGENT_KINDS = ['claude-code', 'codex', 'pi'] as const;
+const ALL_AGENT_KINDS = ['claude-code', 'codex', 'pi', 'antigravity'] as const;
 
 // renderer 视角: id 全部是不透明 string, 渲染只读 displayName。
 // effort 的合法 id 集合 = capabilities.effortLevels 上每个项的 id。
@@ -61,7 +61,7 @@ export interface ModelDescriptor {
    * 解耦;生产环境 XD 网关由服务端按区域下发)。消费点见 modelDefinitions.newSessionDefaultModelId
    * 与 draftModelCalibration:被标记且可用的模型优先作新对话默认。
    */
-  newSessionDefault?: ('claude-code' | 'codex' | 'pi')[];
+  newSessionDefault?: ('claude-code' | 'codex' | 'pi' | 'antigravity')[];
 }
 
 export interface EffortDescriptor {
@@ -247,7 +247,7 @@ function isOptionalNewSessionDefault(value: unknown): boolean {
   if (!Array.isArray(value) || value.length === 0) return false;
   if (
     value.some(
-      (agent) => agent !== 'claude-code' && agent !== 'codex' && agent !== 'pi',
+      (agent) => agent !== 'claude-code' && agent !== 'codex' && agent !== 'pi' && agent !== 'antigravity',
     )
   ) {
     return false;
@@ -255,7 +255,7 @@ function isOptionalNewSessionDefault(value: unknown): boolean {
   return new Set(value).size === value.length;
 }
 
-function isModelDescriptor(value: unknown): value is ModelDescriptor {
+function isModelDescriptor(value: unknown, agent: AgentKind): value is ModelDescriptor {
   if (!isRecord(value)) return false;
   const efforts = value.efforts;
   const defaultEffort = value.defaultEffort;
@@ -266,7 +266,7 @@ function isModelDescriptor(value: unknown): value is ModelDescriptor {
     value.displayName.length > 0 &&
     typeof value.contextWindow === 'number' &&
     Number.isFinite(value.contextWindow) &&
-    value.contextWindow > 0 &&
+    (value.contextWindow > 0 || (agent === 'antigravity' && value.contextWindow === 0)) &&
     isStringArray(efforts) &&
     (defaultEffort === null ||
       (typeof defaultEffort === 'string' && efforts.includes(defaultEffort))) &&
@@ -293,7 +293,7 @@ function isNamedDescriptor(value: unknown): boolean {
   );
 }
 
-function parseAgentCapabilities(value: unknown): AgentCapabilities {
+function parseAgentCapabilities(value: unknown, agent: AgentKind): AgentCapabilities {
   if (!isRecord(value)) {
     throw new Error('Invalid agent capabilities response');
   }
@@ -304,7 +304,7 @@ function parseAgentCapabilities(value: unknown): AgentCapabilities {
   // stand on its own (missing defaultEffort, extra junk) instead of
   // rejecting the whole remote list. One stale model on the controlled
   // machine was emptying the selector.
-  value.availableModels = value.availableModels.filter(isModelDescriptor);
+  value.availableModels = value.availableModels.filter(model => isModelDescriptor(model, agent));
   if (
     typeof value.hasFastMode !== 'boolean' ||
     !Array.isArray(value.effortLevels) ||
@@ -482,7 +482,7 @@ async function fetchCapabilities(
   }
   const p = raw
     .then((value) => {
-      const caps = parseAgentCapabilities(value);
+      const caps = parseAgentCapabilities(value, agentKind);
       // 在途期间设备被驱逐(下线 / 断链)→ 丢弃结果,不回写 cache、不动 inflight。
       if (isCurrent()) {
         if (deviceId && requestedAt && !expiry.remember(key, caps, requestedAt, () => {

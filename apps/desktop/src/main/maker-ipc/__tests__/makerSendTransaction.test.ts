@@ -4703,6 +4703,7 @@ describe('session-agent-switch handoff injection', () => {
     };
     let handoff: string | null = null;
     const switchDeps: MakerSessionAgentSwitchHandlerDeps = {
+      getAgentPermissionModes: () => ['ask', 'auto', 'acceptEdits', 'bypassPermissions'],
       pendingSwitches,
       getSessionRow: async () => ({ ...row }),
       getLiveSession: () => current,

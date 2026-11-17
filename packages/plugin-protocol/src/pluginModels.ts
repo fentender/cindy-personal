@@ -16,7 +16,7 @@ export interface GhostModelsNeeds {
 
 /** Explicit model route shared by new-task, turn and request control points. */
 export interface GhostModelRoute {
-  agentKind: 'cc' | 'codex' | 'pi';
+  agentKind: 'cc' | 'codex' | 'pi' | 'antigravity';
   model: string;
   providerId: string;
   agentDeviceId?: string;
@@ -56,7 +56,7 @@ const isText = (value: unknown, max: number): value is string =>
 export function parseGhostModelRoute(value: unknown): GhostModelRoute | undefined {
   if (!isRecord(value)) return undefined;
   const text = (raw: unknown) => isText(raw, 256) ? raw.trim() : undefined;
-  const agentKind = value.agentKind === 'cc' || value.agentKind === 'codex' || value.agentKind === 'pi'
+  const agentKind = value.agentKind === 'cc' || value.agentKind === 'codex' || value.agentKind === 'pi' || value.agentKind === 'antigravity'
     ? value.agentKind : undefined;
   const model = text(value.model);
   const providerId = text(value.providerId);

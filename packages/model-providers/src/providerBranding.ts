@@ -101,7 +101,7 @@ export function isProviderLogoKind(value: unknown): value is ProviderLogoKind {
 }
 
 export type ProviderLogoRouting = Readonly<
-  Record<string, { readonly upstream: string } | undefined>
+  Record<string, { readonly upstream?: string } | undefined>
 >;
 
 /** Bundled regional presets share a brand and never infer it from display names. */
@@ -148,6 +148,7 @@ const PROVIDER_LOGO_KIND_BY_ID: Readonly<Record<string, ProviderLogoKind>> = {
   xd: 'cindy',
   xai: 'xai',
   gemini: 'google',
+  antigravity: 'google',
   openrouter: 'openrouter',
   deepseek: 'deepseek',
   'zhipu-glm-cn': 'zhipu',
@@ -265,7 +266,7 @@ export function resolveProviderLogoKind(
 
   let routedKind: ProviderLogoKind | null = null;
   for (const descriptor of Object.values(routing ?? {})) {
-    if (!descriptor) continue;
+    if (!descriptor?.upstream) continue;
     try {
       const hostname = new URL(descriptor.upstream.replace(/\{[A-Za-z][A-Za-z0-9_]*\}/g, 'account')).hostname.toLowerCase();
       const match = PROVIDER_LOGO_KIND_BY_HOST.find(([host]) => hostMatches(hostname, host));

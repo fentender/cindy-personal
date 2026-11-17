@@ -55,9 +55,8 @@ export function parseImDefaultSettingsPatch(raw: unknown): ImDefaultSettingsPatc
     }
     const agentInput = input.agents as Record<string, unknown>;
     const agentsPatch: NonNullable<ImDefaultSettingsPatch['agents']> = {};
-    // 三个 harness 必须对称解析；漏掉 pi 会让 IM 设置页切 Pi 后改模型静默丢弃
-    // (store 本身支持 pi，见 defaultSettingsStore / IM_DEFAULT_SETTINGS.agents.pi)。
-    for (const kind of ['claude-code', 'codex', 'pi'] as const) {
+    // 各引擎的设置都要进入存储，避免界面选项在 IPC 解析时被丢弃。
+    for (const kind of ['claude-code', 'codex', 'pi', 'antigravity'] as const) {
       if (kind in agentInput) {
         agentsPatch[kind] = parseImDefaultAgentSettings(kind, agentInput[kind]);
       }

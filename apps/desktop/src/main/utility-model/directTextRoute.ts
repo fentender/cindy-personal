@@ -24,7 +24,7 @@ export function resolveDirectTextRoute(
   model: CatalogModel | undefined,
 ): RoutingDescriptor | null {
   const routing = provider.routing[agent];
-  if (!provider.agents.includes(agent) || !routing || routing.disabled) return null;
+  if (!provider.agents.includes(agent) || !routing || routing.transport === 'acp' || routing.disabled) return null;
   if (!['api-key-header', 'oauth-token', 'none'].includes(routing.authStrategy)) return null;
   const defaultWire = routing.wireProtocol
     ?? (agent === 'claude-code' ? 'anthropic-messages' : 'openai-responses');

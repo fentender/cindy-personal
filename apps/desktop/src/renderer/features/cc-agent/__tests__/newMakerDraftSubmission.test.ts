@@ -178,6 +178,7 @@ async function submit(options: {
     availability: {
       pi: availableProviders('pi'), codex: availableProviders('codex'),
       'claude-code': availableProviders('claude-code'),
+      antigravity: [],
     },
     resolveDefaultProviderIdForModel: () => selectedProviderId,
   };

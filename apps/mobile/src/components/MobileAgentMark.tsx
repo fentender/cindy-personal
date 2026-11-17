@@ -3,6 +3,7 @@
  * 不用于 Anthropic / OpenAI provider 或模型品牌；后两者由 MobileProviderMark 负责。
  */
 import Svg, { G, Path } from 'react-native-svg';
+import { PROVIDER_LOGO_PATHS } from '@cindy/model-providers/branding';
 
 import { iconSize } from '@/theme';
 
@@ -19,7 +20,7 @@ const CODEX_SMALL_STROKE = 2;
 const CODEX_LARGE_STROKE = 1.6;
 
 export interface MobileAgentMarkProps {
-  agentKind: 'claude-code' | 'codex' | 'pi';
+  agentKind: 'claude-code' | 'codex' | 'pi' | 'antigravity';
   color: string;
   size?: number;
 }
@@ -29,7 +30,9 @@ export function MobileAgentMark({ agentKind, color, size = iconSize.sm }: Mobile
   const codexStrokeWidth = size <= iconSize.sm ? CODEX_SMALL_STROKE : CODEX_LARGE_STROKE;
   return (
     <Svg accessible={false} height={size} viewBox="0 0 24 24" width={size}>
-      {agentKind === 'pi' ? (
+      {agentKind === 'antigravity' ? (
+        <Path d={PROVIDER_LOGO_PATHS.google} fill={color} />
+      ) : agentKind === 'pi' ? (
         // Keep all three strokes in one native path. Separate horizontal/vertical
         // paths have degenerate bounds and can disappear in the iOS SVG renderer.
         <Path

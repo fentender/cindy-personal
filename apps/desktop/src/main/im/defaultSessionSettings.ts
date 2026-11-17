@@ -70,7 +70,7 @@ export async function projectImDefaultSettings<T extends ImDefaultSettings>(raw:
   const providers = await listProvidersForDefaults();
   let view = usesAutomaticImModel(raw)
     ? await resolveImAutomaticDefaults(raw, channel, providers) ?? raw : raw;
-  for (const agent of ['claude-code', 'codex', 'pi'] as const) {
+  for (const agent of ['claude-code', 'codex', 'pi', 'antigravity'] as const) {
     if (agent === view.agentKind || raw.agents[agent].model) continue;
     const resolved = await resolveImAutomaticDefaults(raw, channel, providers, agent);
     if (resolved) view = { ...view, agents: { ...view.agents, [agent]: resolved.agents[agent] } };

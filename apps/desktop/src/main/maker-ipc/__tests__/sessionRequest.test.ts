@@ -10,9 +10,9 @@ describe('session IPC request parsing', () => {
       })).toThrow('[INVALID_PARAMS]');
     },
   );
-  it('reads create-session required fields and preserves opaque options', () => {
+  it.each(['codex', 'antigravity'])('reads %s create-session fields and preserves opaque options', (agentKind) => {
     const opts = readCreateSessionOpts({
-      agentKind: 'codex',
+      agentKind,
       workingDir: 'C:\\repo',
       model: 'gpt-5.4',
       workspaceKind: 'dialogue',
@@ -21,7 +21,7 @@ describe('session IPC request parsing', () => {
     });
 
     expect(opts).toMatchObject({
-      agentKind: 'codex',
+      agentKind,
       workingDir: 'C:\\repo',
       model: 'gpt-5.4',
       workspaceKind: 'dialogue',

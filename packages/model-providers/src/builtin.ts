@@ -53,7 +53,7 @@ export function withVerifiedStaticWindows(provider: Provider): Provider {
   >) {
     if (!list) continue;
     models[agent] = list.map((m) => {
-      if (m.contextWindowVerified !== undefined) return m;
+      if (m.contextWindowVerified !== undefined || m.contextWindow === 0) return m;
       changed = true;
       return { ...m, contextWindowVerified: true };
     });
@@ -258,13 +258,26 @@ const GEMINI_PROVIDER: Provider = {
   models: {},
 };
 
-/** 内置供应商(顺序契约见文件头;gemini 追加在 xd 之后,聊天分段与 first-wins 契约零影响)。 */
+/** 原生 CLI 独占订阅与模型发现；ACP 不声明 HTTP 上游。 */
+export const ANTIGRAVITY_PROVIDER: Provider = {
+  id: 'antigravity',
+  name: 'Antigravity',
+  source: 'builtin',
+  agents: ['antigravity'],
+  auth: { method: 'oauth' },
+  access: { kind: 'subscription', product: 'Antigravity' },
+  routing: { antigravity: { transport: 'acp', authStrategy: 'oauth-passthrough' } },
+  models: { antigravity: [] },
+};
+
+/** 内置供应商按稳定顺序追加，避免改变已有模型的 first-wins 优先级。 */
 export const BUILTIN_PROVIDERS: Provider[] = [
   ANTHROPIC_PROVIDER,
   OPENAI_PROVIDER,
   XAI_PROVIDER,
   XD_PROVIDER,
   GEMINI_PROVIDER,
+  ANTIGRAVITY_PROVIDER,
 ].map((provider) => projectProviderMediaModels(provider, bundledModelRegistry, { addDeclared: true }));
 
 /** 打包进 App 的内置目录(离线兜底 / 远端拉取失败时使用)。 */

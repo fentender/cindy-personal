@@ -55,6 +55,8 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync, mkdirSync, readdirSync, copyFileSync } from 'node:fs';
 import { dirname, resolve, join, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
+import { personalReleaseSource } from '../../../packages/maker-shared/src/personalRelease.ts';
 import {
   parseArgs,
   assertProductionGitGate,
@@ -90,7 +92,7 @@ import {
 import { SELF_HOST_REGIONS, loadSelfHostRegions, missingSelfHostBakeFields, stripSelfHostRegionEnv } from './lib/self-host-region.mjs';
 
 const MOBILE_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const NPX = process.platform === 'win32' ? 'npx.cmd' : 'npx';
+const require = createRequire(import.meta.url);
 
 function log(msg) { console.error(msg); }
 
@@ -168,6 +170,7 @@ function readAppJson() {
 function run(cmd, args, opts = {}) {
   log(`  $ ${cmd} ${args.join(' ')}`);
   const r = spawnSync(cmd, args, { cwd: MOBILE_DIR, stdio: 'inherit', ...opts });
+  if (r.error) throw r.error;
   if (r.status !== 0) throw new Error(`命令失败(${r.status}): ${cmd} ${args.join(' ')}`);
 }
 
@@ -211,7 +214,8 @@ function buildAndroidArtifacts(env, region, artifactKinds) {
   // (fail-fast,缺配置不白跑数分钟 prebuild)。
   const signEnv = resolveAndroidSigningEnv(region, env);
 
-  run(NPX, ['--yes', 'expo', 'prebuild', '--platform', 'android', '--clean'], { env });
+  const expoCli = join(dirname(require.resolve('expo/package.json')), 'bin/cli');
+  run(process.execPath, [expoCli, 'prebuild', '--platform', 'android', '--clean'], { env });
   patchGradleSigning();
   if (region.authRegion === 'global') configureGooglePlayVariant();
   patchGradleProps();
@@ -231,8 +235,18 @@ function buildAndroidArtifacts(env, region, artifactKinds) {
   });
   log(`  → gradle ${tasks.join(' ')}(已解析 JDK 17+ 运行时)`);
   const androidDir = resolve(MOBILE_DIR, 'android');
-  const gradlew = process.platform === 'win32' ? 'gradlew.bat' : './gradlew';
-  run(gradlew, tasks, { cwd: androidDir, env: javaEnv });
+  if (process.platform === 'win32') {
+    // Gradle wrapper 是批处理；任务名来自固定枚举，路径参数不经过字符串拼接。
+    run(process.env.ComSpec || 'cmd.exe', ['/d', '/c', 'gradlew.bat', ...tasks,
+      '-Pexpo.android.cmakeObjectPathMax=0',
+      // KSP 增量缓存不能计算 Windows 跨盘依赖的相对路径。
+      '-Pksp.incremental=false',
+      // Windows 连续 prebuild 会重建 JAR；构建结束时释放编译器持有的文件句柄。
+      '--no-daemon', '-Pkotlin.compiler.execution.strategy=in-process',
+      '--init-script', '../scripts/sim-windows-native.gradle'], { cwd: androidDir, env: javaEnv });
+  } else {
+    run('./gradlew', tasks, { cwd: androidDir, env: javaEnv });
+  }
 
   const artifacts = {};
   if (artifactKinds.includes('apk')) {
@@ -422,7 +436,11 @@ async function main() {
   androidBuildFailureStage = ANDROID_BUILD_FAILURE_STAGE.buildPlan;
   const artifactKinds = resolveAndroidArtifactKinds(region.authRegion, args.artifacts);
   const appJson = readAppJson();
-  const version = appJson?.expo?.version ?? '';
+  const personal = personalReleaseSource(process.env.EXPO_PUBLIC_CINDY_PERSONAL_RELEASE_REPOSITORY);
+  const version = personal ? process.env.CINDY_PERSONAL_RELEASE_VERSION : appJson?.expo?.version ?? '';
+  if (personal && (!/^\d+\.\d+\.\d+$/.test(version || '') || artifactKinds.join(',') !== 'apk')) {
+    throw new Error('Personal release requires an x.y.z version and APK output');
+  }
   // --version-code 覆盖须是正整数且不超 Android 平台上限 2100000000:app.config.js
   // 对无效值会静默忽略,而 aapt2 校验在缺 build-tools 时降级 warn——不在入口拦住,
   // 坏值会烤出错版 APK / 让 assembleRelease 半途失败才被发现。
@@ -436,7 +454,7 @@ async function main() {
 
   // selfhost 烘焙必填字段(prebuild 期 app.config.js 硬校验)提前自查:dry-run 只预告,
   // --execute 在 prebuild 白跑数分钟之前 fail-fast。
-  const missingBake = missingSelfHostBakeFields(region);
+  const missingBake = missingSelfHostBakeFields(region).filter((field) => !personal || !field.startsWith('tapdb.'));
 
   // git 闸门只管真构建:dry-run 纯本地(不做 origin/main 远端比对,分支/离线可跑)。
   let expectedUploadCertificateSha256 = null;
@@ -507,7 +525,7 @@ async function main() {
   // 否则同一个 versionCode 会出现两条不兼容 OTA runtime,直接中止。
   const runtimeVersions = {};
   if (built.artifacts.apk) {
-    runtimeVersions.apk = readEmbeddedRuntimeVersionFromApk(built.artifacts.apk);
+    runtimeVersions.apk = personal ? '' : readEmbeddedRuntimeVersionFromApk(built.artifacts.apk);
     log(`  ✓ runtimeVersion(APK assets/fingerprint): ${runtimeVersions.apk}`);
     validateApkMetadata(built.artifacts.apk, region.androidPackage, versionCode);
   }

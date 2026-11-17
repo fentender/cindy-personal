@@ -1,9 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import { buildUserProvider } from '../user-provider.js';
-import { alignModelApiRoute, providerInterfaceModelRoute } from '../providerInterfaceRoutes.js';
+import { alignModelApiRoute, availableModelInterfaces, providerInterfaceDefaultRoute, providerInterfaceModelRoute } from '../providerInterfaceRoutes.js';
 import { BUNDLED_CATALOG, parseCatalog } from '../catalog.js';
 
 describe('documented supplier interfaces', () => {
+  // 原生订阅走 ACP，不能因为型号相同而获得已有付费 HTTP API 路由；tier：unit。
+  it('does not project HTTP provider interfaces onto the native Antigravity engine', () => {
+    expect(availableModelInterfaces(BUNDLED_CATALOG.modelRegistry, 'agnes', 'agnes-3.0-flash',
+      'https://apihub.agnes-ai.com', 'pi').length).toBeGreaterThan(0);
+    expect(availableModelInterfaces(BUNDLED_CATALOG.modelRegistry, 'agnes', 'agnes-3.0-flash',
+      'https://apihub.agnes-ai.com', 'antigravity')).toEqual([]);
+    expect(providerInterfaceDefaultRoute('agnes', 'antigravity', 'https://apihub.agnes-ai.com')).toBeUndefined();
+  });
   // Server #1376: the old bundled profile omitted this discovered model. Unit
   // regression through the saved-connection consumer, preserving user choices.
   it('resolves OpenCode Fable 5.2 through the existing Messages profile', () => {

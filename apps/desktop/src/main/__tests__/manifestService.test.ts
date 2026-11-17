@@ -83,6 +83,33 @@ function setRuntime(platform: NodeJS.Platform, arch: string): void {
 }
 
 describe('manifestService cache channel identity', () => {
+  it('reads personal app releases without replacing the official engine manifest', async () => {
+    vi.stubEnv('CINDY_PERSONAL_RELEASE_REPOSITORY', 'fentender/cindy-personal');
+    const service = await import('../manifestService');
+    try {
+      mockManifestResponse(RELEASE_MANIFEST);
+      mockManifestResponse(JSON.stringify({ app: { version: '1.0.2' } }));
+      expect((await service.fetchAppUpdateManifest())?.app.version).toBe('1.0.2');
+      expect(service.getCachedManifest()?.app.version).toBe('0.0.65');
+      expect(service.getBaseUrl()).toBe(TEST_CDN_BASE_URL);
+      expect(netRequest.mock.calls.map(([url]) => url)).toContainEqual(
+        expect.stringContaining('https://github.com/fentender/cindy-personal/releases/latest/download/manifest-'),
+      );
+    } finally { vi.unstubAllEnvs(); }
+  });
+
+  it('does not replace an unavailable personal update with the official app release', async () => {
+    vi.stubEnv('CINDY_PERSONAL_RELEASE_REPOSITORY', 'fentender/cindy-personal');
+    try {
+      const service = await import('../manifestService');
+      mockManifestResponse(RELEASE_MANIFEST);
+      mockManifestResponse('invalid manifest');
+      await expect(service.fetchAppUpdateManifest()).resolves.toBeNull();
+      expect(service.getCachedManifest()?.app.version).toBe('0.0.65');
+      expect(netRequest).toHaveBeenCalledTimes(2);
+    } finally { vi.unstubAllEnvs(); }
+  });
+
   beforeEach(() => {
     netRequest.mockReset();
     canaryRead.mockReset();

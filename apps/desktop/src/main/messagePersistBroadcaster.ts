@@ -112,7 +112,7 @@ export interface MessagePersistencePorts {
 export interface DeferredTurnErrorRow {
   content: Record<string, unknown>;
   agentMeta: AgentMeta | null;
-  agentKind: 'cc' | 'codex' | 'pi' | undefined;
+  agentKind: 'cc' | 'codex' | 'pi' | 'antigravity' | undefined;
   turnStartedAt: number;
   occurredAt: number;
 }
@@ -447,9 +447,9 @@ export function createMessagePersistence(deps: MessagePersistencePorts) {
    * session.agent_kind 只代表"当前引擎",历史行的 agent_meta 必须按写入时引擎解析。
    * clearSessionPersistState 时清理。
    */
-  const dbAgentKindBySession = new Map<string, 'cc' | 'codex' | 'pi'>();
+  const dbAgentKindBySession = new Map<string, 'cc' | 'codex' | 'pi' | 'antigravity'>();
 
-  function noteSessionAgentKind(sessionId: string, dbAgentKind: 'cc' | 'codex' | 'pi'): void {
+  function noteSessionAgentKind(sessionId: string, dbAgentKind: 'cc' | 'codex' | 'pi' | 'antigravity'): void {
     // Called once per newly bound Session instance; beginBinding filters repeat wiring.
     // A replacement can have the same business id AND agent kind, but owns no old items.
     if (dbAgentKindBySession.get(sessionId) === 'codex' || dbAgentKind === 'codex') {
@@ -466,7 +466,7 @@ export function createMessagePersistence(deps: MessagePersistencePorts) {
     dbAgentKindBySession.set(sessionId, dbAgentKind);
   }
 
-  function getSessionDbAgentKind(sessionId: string): 'cc' | 'codex' | 'pi' | null {
+  function getSessionDbAgentKind(sessionId: string): 'cc' | 'codex' | 'pi' | 'antigravity' | null {
     return dbAgentKindBySession.get(sessionId) ?? null;
   }
 
@@ -1479,8 +1479,10 @@ export function createMessagePersistence(deps: MessagePersistencePorts) {
         input: persistedInput,
       });
     }
+    // ACP 工具名与参数可在后续通知中补齐，同一调用只维护一条历史记录。
+    const updatable = isUpdatableToolUse(toolName) || getSessionDbAgentKind(sessionId) === 'antigravity';
     const existingPersistId =
-      isUpdatableToolUse(toolName) && toolUseId
+      updatable && toolUseId
         ? updatableToolUsePersistIdBySession.get(sessionId)?.get(toolUseId)
         : undefined;
     if (existingPersistId) {
@@ -1511,7 +1513,7 @@ export function createMessagePersistence(deps: MessagePersistencePorts) {
       agentMeta: meta,
       createdAt,
     });
-    if (isUpdatableToolUse(toolName) && toolUseId) {
+    if (updatable && toolUseId) {
       rememberUpdatableToolUsePersistId(sessionId, toolUseId, persistId);
     }
     rememberCodexPlanRow(sessionId, toolName, toolUseId, persistId, persistedInput);
@@ -3223,7 +3225,7 @@ export function createMessagePersistence(deps: MessagePersistencePorts) {
     row: {
       content: Record<string, unknown>;
       agentMeta: AgentMeta | null;
-      agentKind: 'cc' | 'codex' | 'pi' | undefined;
+      agentKind: 'cc' | 'codex' | 'pi' | 'antigravity' | undefined;
       /** 行的排序时间上界(通常是错误到达的时刻)。 */
       orderedAt: number;
       turnStartedAt: number;

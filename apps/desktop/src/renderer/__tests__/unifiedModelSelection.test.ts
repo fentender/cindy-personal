@@ -95,6 +95,15 @@ function recentOf(over: Partial<RecentModelItem> = {}): RecentModelItem {
 }
 
 describe('resolveUnifiedRowConfig', () => {
+  it('keeps the native Antigravity engine and its own effort metadata', () => {
+    const entry = entryOf({ providerId: 'antigravity', modelId: 'native-model',
+      candidates: ['antigravity'], recommended: 'antigravity', nativeAgent: 'antigravity',
+      capabilities: { antigravity: capability('antigravity', { contextWindow: 0 }) },
+    });
+    expect(resolveUnifiedRowConfig({ entry })).toMatchObject({
+      engine: 'antigravity', agent: 'antigravity', effort: 'medium', fast: false,
+    });
+  });
   it('无 override 时落推荐引擎与目录默认档', () => {
     const config = resolveUnifiedRowConfig({ entry: entryOf() });
     expect(config.engine).toBe('cc');

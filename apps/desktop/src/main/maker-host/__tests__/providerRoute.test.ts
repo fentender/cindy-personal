@@ -117,7 +117,7 @@ describe('provider application attribution', () => {
  * 在等价场景下逐字段一致。下面每个 toEqual 的**字面量**就是那条 no-break 基线 —— 任一字段漂移
  * 都会让现有用户路由被悄悄改掉,这个测试就是那道防线(规则 9/10/11)。
  */
-function descriptor(providerId: string, agent: AgentKind) {
+function descriptor(providerId: string, agent: Exclude<AgentKind, 'antigravity'>) {
   const p = BUNDLED_CATALOG.providers.find((x) => x.id === providerId);
   if (!p) throw new Error(`missing provider ${providerId}`);
   const routing = p.routing[agent];

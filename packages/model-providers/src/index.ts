@@ -77,6 +77,7 @@ export { modelProtocolComparison, nativeModelAgents } from "./modelProtocol.js";
 
 export {
   BUNDLED_CATALOG,
+  ANTIGRAVITY_PROVIDER,
   BUILTIN_PROVIDERS,
   claudeSubscriptionOnlyForClaudeCode,
   parseCatalog,

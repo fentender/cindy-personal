@@ -94,8 +94,8 @@ export interface ResolvedMediaInvocationGuide {
 /** Local execution state, never supplied by the protocol Guide. */
 export type MediaInvocationBinding =
   | { providerId: string; executor: 'gateway' | 'provider-image' }
-  | { providerId: string; executor: 'provider-http'; connectionRevision: string; sourceAgent: 'claude-code' | 'codex' | 'pi'; guideSource: 'custom' | 'official' }
-  | { providerId: string; executor: 'provider-video'; connectionRevision: string; videoProtocol?: ProviderVideoApi; sourceAgent?: 'claude-code' | 'codex' | 'pi' };
+  | { providerId: string; executor: 'provider-http'; connectionRevision: string; sourceAgent: 'claude-code' | 'codex' | 'pi' | 'antigravity'; guideSource: 'custom' | 'official' }
+  | { providerId: string; executor: 'provider-video'; connectionRevision: string; videoProtocol?: ProviderVideoApi; sourceAgent?: 'claude-code' | 'codex' | 'pi' | 'antigravity' };
 
 /** Persisted operation snapshot plus the independently selected local binding. */
 export type PreparedMediaInvocationGuide = Omit<MediaInvocationGuide, 'operations'> &

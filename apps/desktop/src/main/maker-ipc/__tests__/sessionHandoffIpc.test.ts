@@ -79,6 +79,19 @@ function creationFixture() {
 }
 
 describe('maker:session:handoff (receiving computer)', () => {
+  // unit/protocol：新引擎必须通过实际接收边界并保留路线，不能被旧枚举拒绝或改用默认引擎。
+  it('creates a native Antigravity task through the authenticated receiver', async () => {
+    const { id, rows, deps } = creationFixture();
+    deps.resolveExecution = async input => ({ agentKind: input.agentKind!, model: input.model!, providerId: 'antigravity', fastMode: false });
+    const send = vi.fn(async () => ({ ok: true as const, agentKind: 'antigravity', wakeKind: 'queued' as const,
+      targetTitle: null, targetLastUserSendAt: null }));
+    const handle = createSessionHandoffHandler({ create: createRemoteSessionOpener(deps), send, validate: async () => true });
+    expect(await handle('source-device', { ...request, sessionId: id, action: 'create', create: {
+      permissionMode: 'ask', agentKind: 'antigravity', model: 'native-model',
+    } })).toMatchObject({ ok: true, wakeKind: 'created', agentKind: 'antigravity' });
+    expect(rows.get(id)).toMatchObject({ agentKind: 'antigravity', model: 'native-model', providerId: 'antigravity' });
+    expect(send).toHaveBeenCalledOnce();
+  });
   // Unit: exercise the receiving production handler and opener together. Replay/validation
   // failures must not create twice, and source authority is checked immediately before commit.
   it('creates an ordinary destination task once, then uses the existing message queue', async () => {
@@ -163,7 +176,7 @@ describe('maker:session:handoff (receiving computer)', () => {
         defaultEffort: 'medium', supportsFastMode: true }));
       const readRemoteRouting = vi.fn(async () => {
         if (scenario === 'offline') throw Object.assign(new Error('Device offline'), { code: 'DEVICE_OFFLINE' });
-        return { availability: { 'claude-code': [], pi: [], codex: [{ id: 'remote-provider', name: 'Remote', models: models.map(m => m.id),
+        return { availability: { antigravity: [], 'claude-code': [], pi: [], codex: [{ id: 'remote-provider', name: 'Remote', models: models.map(m => m.id),
           fastModels: models.map(m => m.id) }] }, remoteCodexModels: models,
           resolveDefaultProviderIdForModel: () => 'remote-provider' };
       });

@@ -63,16 +63,18 @@ describe('runtime-configs', () => {
       readMemorySettings: () => memorySettings,
     }));
 
-    const { buildDesktopClaudeRuntimeConfig, desktopCodexRuntimeConfig } = await import(
+    const { buildDesktopClaudeRuntimeConfig, desktopCodexRuntimeConfig, desktopRuntimeConfigs } = await import(
       '../runtime-configs.js'
     );
 
     const claudeConfig = buildDesktopClaudeRuntimeConfig(() => 'http://127.0.0.1:1234');
+    const nativeConfig = desktopRuntimeConfigs.buildAntigravityRuntimeConfig();
 
     expect(claudeConfig.memoryEnabled).toBe(false);
     expect(claudeConfig.makerMemoryEnabled).toBe(true);
     expect(desktopCodexRuntimeConfig.memoryEnabled).toBe(false);
     expect(desktopCodexRuntimeConfig.makerMemoryEnabled).toBe(true);
+    expect(nativeConfig.makerMemoryEnabled).toBe(true);
 
     memorySettings = {
       maker: false,
@@ -85,6 +87,7 @@ describe('runtime-configs', () => {
     expect(claudeConfig.makerMemoryEnabled).toBe(false);
     expect(desktopCodexRuntimeConfig.memoryEnabled).toBe(true);
     expect(desktopCodexRuntimeConfig.makerMemoryEnabled).toBe(false);
+    expect(nativeConfig.makerMemoryEnabled).toBe(false);
   });
 
   it('Claude 订阅会话只注入 Anthropic 一方的子代理覆写;网关会话的覆写语义不变', async () => {

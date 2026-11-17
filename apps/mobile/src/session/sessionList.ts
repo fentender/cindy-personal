@@ -156,6 +156,8 @@ export function localizeRemoteSessionListItem(
     ? 'Codex'
     : item.session.agentKind === 'pi'
       ? 'Pi'
+      : item.session.agentKind === 'antigravity'
+        ? 'Antigravity'
       : 'Claude Code';
   const localizedItems = item.automationGroup?.items.map((member) => localizeRemoteSessionListItem(member, now, translate));
   const localizedChildren = localizedItems?.map((member) => ({

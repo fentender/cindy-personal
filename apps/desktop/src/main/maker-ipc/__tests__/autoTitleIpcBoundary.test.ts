@@ -397,6 +397,11 @@ describe('maker:auto-title — sender 断言', () => {
 });
 
 describe('maker:auto-title — payload 运行期校验', () => {
+  it('accepts native Antigravity tasks without changing the auxiliary title route', async () => {
+    await expect(invoke({ sessionId: 'native-task', text: '继续原任务', agentKind: 'antigravity' }))
+      .resolves.toEqual({ applied: true, done: true });
+    expect(h.run).toHaveBeenCalledWith(expect.objectContaining({ sessionId: 'native-task', agentKind: 'antigravity' }));
+  });
   it.each([
     ['非对象', null],
     ['数组', []],

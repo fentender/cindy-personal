@@ -2110,14 +2110,14 @@ describe('local-db:sessions:set-pinned-card-summaries', () => {
   });
 });
 
-it('opens a normal renderer task through shared model admission', async () => {
-  const admission = vi.fn(async (body: SessionOpenBody) => ({ ...body, agentKind: 'codex' as const,
+it.each(['codex', 'antigravity'] as const)('opens a normal %s renderer task through shared model admission', async agentKind => {
+  const admission = vi.fn(async (body: SessionOpenBody) => ({ ...body, agentKind,
     model: 'selected-model', providerId: 'selected-provider', effort: '', fastMode: false }));
   setSessionOpeningModelAdmission(admission);
-  await invokeCreate({ id: 'normal-open', title: 'Normal task', workspaceKind: 'project', permissionMode: 'auto' });
+  await invokeCreate({ id: 'normal-open', title: 'Normal task', agentKind, workspaceKind: 'project', permissionMode: 'auto' });
   expect(admission).toHaveBeenCalledOnce();
-  expect(h.sqlite!.prepare('SELECT model, provider_id, effort, permission_mode FROM sessions WHERE id = ?').get('normal-open'))
-    .toEqual({ model: 'selected-model', provider_id: 'selected-provider', effort: '', permission_mode: 'auto' });
+  expect(h.sqlite!.prepare('SELECT agent_kind, model, provider_id, effort, permission_mode FROM sessions WHERE id = ?').get('normal-open'))
+    .toEqual({ agent_kind: agentKind, model: 'selected-model', provider_id: 'selected-provider', effort: '', permission_mode: 'auto' });
 });
 it('does not create a renderer task when common model admission fails', async () => {
   setSessionOpeningModelAdmission(async () => { throw new Error('model unavailable'); });

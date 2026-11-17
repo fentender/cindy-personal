@@ -60,6 +60,7 @@ import {
   type Session,
   isBotMcpServerAllowed,
   ClaudeCodeAgent,
+  AntigravityAgent,
   CodexAgent,
   configureDefaultImageResizer,
   type AgentKind,
@@ -240,6 +241,7 @@ import {
   readNativeCodexCatalog, findCodexCatalogModel, nativeCodexFallbackModel, patchCodexModelMaxContextWindow,
 } from './codex-custom-context-catalog.js';
 import { buildPiAgent } from './pi-host.js';
+import { nativeAntigravityHost, resolveAntigravityBinary } from './antigravity-host.js';
 import {
   captureLocalPiPackageRuntimeInvalidationSnapshot,
   settleLocalPiPackageRuntimeSnapshot,
@@ -261,6 +263,7 @@ import {
 import {
   buildDesktopClaudeRuntimeConfig,
   desktopCodexRuntimeConfig,
+  desktopRuntimeConfigs,
   ensureBundledRipgrepReady,
   getRipgrepBinaryPath,
 } from './runtime-configs.js';
@@ -1084,7 +1087,7 @@ export function getMaker(): Maker {
         if (!session || (context.sessionInstanceId && session.instanceId !== context.sessionInstanceId))
           return { ok: false, errorCode: 'CALLER_UNAVAILABLE' };
         const agentKind = context.agentKind;
-        if (agentKind !== 'claude-code' && agentKind !== 'codex' && agentKind !== 'pi')
+        if (agentKind !== 'claude-code' && agentKind !== 'codex' && agentKind !== 'pi' && agentKind !== 'antigravity')
           return { ok: false, errorCode: 'UNKNOWN_AGENT' };
         const catalog = await listBotRuntimeMcpServers({ agentKind, remoteHostId: context.remoteHostId });
         const providers = (_mcpProviders[agentKind] ?? []).map((provider) => ({
@@ -2228,11 +2231,19 @@ export function getMaker(): Maker {
       cindyMakeProvider,
     ];
     _mcpProviders.pi = piMcpProviders;
+    const antigravityMcpProviders = [
+      ...createDesktopMcpProviders(makerMemoryProviderDeps),
+      createCompanionConnectionsProvider(),
+      createCompanionImportProvider(),
+      orcaWorkerBridgeProvider,
+      cindyMakeProvider,
+    ];
+    _mcpProviders.antigravity = antigravityMcpProviders;
     // 用户自定义 MCP:三个 agent 都必须注册其实际持有的数组引用，再统一做初始 refresh。
     // localDb onReady 可能在 Maker 构造前就已触发（此时 registry 无数组，refresh 空跑）；
     // 在此补一次 refresh；DB 尚未就绪时显式延后，由 onReady 的账号路由屏障补齐。
     // 此后每次 CRUD（mcpHandlers.afterChange）也会原地刷新三份数组；运行中会话保持启动快照。
-    registerCustomMcpArrays(claudeMcpProviders, codexMcpProviders, piMcpProviders);
+    registerCustomMcpArrays(claudeMcpProviders, codexMcpProviders, piMcpProviders, antigravityMcpProviders);
     _initialCustomMcpRefresh = refreshCustomMcpProviders().then(() => { refreshInstalledPluginApps(); });
 
     // Store mutations are serialized; each settled callback consumes the exact
@@ -2492,6 +2503,27 @@ export function getMaker(): Maker {
     });
     const piAgent = buildPiAgentForDesktop();
     if (piAgent) makerAgents.pi = withSubscriptionAccounts(piAgent);
+    makerAgents.antigravity = new AntigravityAgent({
+      auth: nativeAntigravityHost.auth,
+      scanLocalCustomizations,
+      getManagedSkills: listCindyManagedSkills,
+      getDisabledSkillPaths: readDisabledSkillPaths,
+      get binaryPath() {
+        const binary = resolveAntigravityBinary();
+        if (!binary) throw new Error('Antigravity CLI is not installed');
+        return binary;
+      },
+      runtimeConfig: desktopRuntimeConfigs.buildAntigravityRuntimeConfig(),
+      logger: desktopMakerLogger,
+      makerMemory: makerMemoryManager,
+      mcpProviders: antigravityMcpProviders,
+      preparePiExtraSpawnConfig: (providers, context) => getPiExtraSpawnConfig(providers, desktopMakerLogger, context),
+      getGhostRosterPrompt,
+      capabilityRouting: DESKTOP_CAPABILITY_ROUTING_POLICY,
+      capabilityAdditions: {
+        availableModels: deriveAvailableModels(getDesktopSelectableCatalog(), 'antigravity'),
+      },
+    });
 
     setVisionGatewayKeyReader(readClaudeApiKey);
     _visionBridgeInstance = createVisionBridge({

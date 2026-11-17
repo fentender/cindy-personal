@@ -100,6 +100,7 @@ function defaultScheduleFormPrefs(): ScheduleFormPrefs {
       'claude-code': EMPTY_AGENT_PREFS,
       codex: EMPTY_AGENT_PREFS,
       pi: EMPTY_AGENT_PREFS,
+      antigravity: EMPTY_AGENT_PREFS,
     },
   };
 }
@@ -110,7 +111,8 @@ function loadScheduleFormPrefs(): ScheduleFormPrefs {
     const raw = window.localStorage.getItem(SCHEDULE_FORM_PREFS_KEY);
     if (!raw) return defaultScheduleFormPrefs();
     const parsed = JSON.parse(raw) as Partial<ScheduleFormPrefs>;
-    const agentKind = parsed.agentKind === 'codex' ? 'codex' : parsed.agentKind === 'pi' ? 'pi' : 'claude-code';
+    const agentKind = parsed.agentKind === 'codex' || parsed.agentKind === 'pi' || parsed.agentKind === 'antigravity'
+      ? parsed.agentKind : 'claude-code';
     const workingDir = typeof parsed.workingDir === 'string' ? parsed.workingDir : '';
     const workspaceKind = normalizePrefsWorkspaceKind(parsed.workspaceKind, workingDir);
     return {
@@ -122,6 +124,7 @@ function loadScheduleFormPrefs(): ScheduleFormPrefs {
         'claude-code': sanitizeAgentPrefs(parsed.lastByAgent?.['claude-code']),
         codex: sanitizeAgentPrefs(parsed.lastByAgent?.codex),
         pi: sanitizeAgentPrefs(parsed.lastByAgent?.pi),
+        antigravity: sanitizeAgentPrefs(parsed.lastByAgent?.antigravity),
       },
     };
   } catch {

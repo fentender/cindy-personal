@@ -6,6 +6,11 @@ config.transformer.babelTransformerPath = require.resolve('./babel-transformer')
 const workspaceRoot = path.resolve(__dirname, '../..');
 // Shared endpoint discovery bundles the public manifests from the repository config directory.
 config.watchFolders = [...config.watchFolders, path.join(workspaceRoot, 'config')];
+// 原生构建产物不参与 JS 打包；Windows 长路径事件会阻塞 Metro 的目录监听器。
+config.resolver.blockList = [
+  ...config.resolver.blockList,
+  /(?:^|[\\/])android[\\/](?:app[\\/])?(?:build|\.gradle|\.cxx)(?:[\\/]|$)/,
+];
 // Keep upload routing build-time-only, with the desktop validator as the single configuration source.
 // Missing config is allowed for local/open-source builds; malformed or cross-region config is not.
 const { mobileLogUploadBuildEnv, mobileLogUploadConfigRequired } = require('../../scripts/shared/log-upload-build-env.mjs');

@@ -177,7 +177,7 @@ function bindings(deps: SpeechCatalogDeps, selection?: SpeechModelSelection): Bi
       if (!agent) continue;
       const route = provider.routing[agent];
       const model = provider.models[agent]?.find((entry) => entry.id === media.id);
-      if (!route || route.disabled || route.headerOverrideState === 'unknown' || !model) continue;
+      if (!route || route.transport === 'acp' || route.disabled || route.headerOverrideState === 'unknown' || !model) continue;
       const base = apiBase(model.route?.baseUrl ?? route.upstream);
       const ownerBase = apiBase(route.upstream);
       if (!base || !ownerBase || base.origin !== ownerBase.origin) continue;

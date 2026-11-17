@@ -123,22 +123,22 @@ describe('cindy_helper session control tools', () => {
     expect(deps.steerSession).toHaveBeenCalledWith({ callerSessionId: undefined, targetSessionId: 'target', message: 'continue' });
   });
 
-  it('forwards a complete harness selection and reports the next-send boundary', async () => {
+  it.each(['codex', 'antigravity'] as const)('forwards a complete %s selection and reports the next-send boundary', async (agentKind) => {
     const { deps, registry } = setup();
     const old = { agentKind: 'claude-code' as const, model: 'claude-fable-5', providerId: null, effort: 'high' as const, fastMode: false };
     vi.mocked(deps.setSessionRuntime).mockResolvedValueOnce({
       ok: true, status: 'deferred', effectiveBoundary: 'next_send', generation: 2,
       effectiveProfile: old,
-      pendingMutation: { generation: 2, source: 'agent', profile: { ...old, agentKind: 'codex', model: 'gpt-6-astra', providerId: 'openai' } },
+      pendingMutation: { generation: 2, source: 'agent', profile: { ...old, agentKind, model: 'selected-model', providerId: 'selected-provider' } },
     });
     expect(parse(await registry.call('set_session_runtime', {
-      session_id: 'target', harness: 'codex', model: 'gpt-6-astra', provider_id: 'openai', expected_generation: 1,
+      session_id: 'target', harness: agentKind, model: 'selected-model', provider_id: 'selected-provider', expected_generation: 1,
     }))).toMatchObject({
       ok: true, effective_boundary: 'next_send', effective: { harness: 'claude-code' },
-      pending: { profile: { harness: 'codex', model: 'gpt-6-astra' } },
+      pending: { profile: { harness: agentKind, model: 'selected-model' } },
     });
     expect(deps.setSessionRuntime).toHaveBeenCalledWith({ targetSessionId: 'target', expectedGeneration: 1,
-      patch: { harness: 'codex', model: 'gpt-6-astra', providerId: 'openai' } });
+      patch: { harness: agentKind, model: 'selected-model', providerId: 'selected-provider' } });
   });
 
   it.each([{ harness: 'codex' }, { harness: 'unknown', model: 'gpt-6-astra' }])('rejects invalid complete selection %j', async (patch) => {

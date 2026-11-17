@@ -17,6 +17,7 @@ import type {
   MessageSourcePlugin,
 } from '@cindy/maker-shared/message-source';
 import type { ToolLoopErrorDetails } from '@cindy/maker-core';
+import type { DbAgentKind } from '../../shared/agentKindConversion';
 
 export type SessionStatus = 'active' | 'archived' | 'deleted';
 export type WorkspaceKind = 'project' | 'dialogue';
@@ -28,10 +29,9 @@ export type DeviceLinkConnectionStatus = 'connected' | 'connecting' | 'disconnec
 
 /**
  * 当前 session 接的是哪个 agent。决定 message.agentMeta 的 JSON 形态。
- * 暂时只有 'cc'（Claude Code）。未来扩展 'codex' 等时新增枚举值即可，
- * schema 不动；老 session DEFAULT 'cc' 兜底。
+ * 与持久化引擎标识保持一致，老 session DEFAULT 'cc'。
  */
-export type AgentKind = 'cc' | 'codex' | 'pi';
+export type AgentKind = DbAgentKind;
 export type MakerVendor = AgentKind | 'orca';
 export type OrcaRole = 'lead' | 'worker';
 
@@ -539,7 +539,7 @@ export type UsageHistorySession = Pick<
 >;
 
 export interface SessionRuntimeProfileProjection {
-  agentKind: 'claude-code' | 'codex' | 'pi';
+  agentKind: 'claude-code' | 'codex' | 'pi' | 'antigravity';
   model: string;
   providerId: string | null;
   effort: Effort | null;
@@ -566,8 +566,8 @@ export type MessageRole =
  * 不作为对话正文渲染,也绝不回发给 agent(注入走 main 的 wire 前缀通道)。
  */
 export interface AgentSwitchContent {
-  fromAgentKind: 'cc' | 'codex' | 'pi';
-  toAgentKind: 'cc' | 'codex' | 'pi';
+  fromAgentKind: 'cc' | 'codex' | 'pi' | 'antigravity';
+  toAgentKind: 'cc' | 'codex' | 'pi' | 'antigravity';
   fromModel: string | null;
   toModel: string | null;
   /** Agent 切换时的来源快照；缺失表示旧版边界数据。 */
@@ -607,7 +607,7 @@ export interface Message {
    * session-agent-switch 后 session.agentKind 只代表当前活跃引擎,历史行按本字段解析;
    * null = 切换功能上线前的老消息(回落 session.agentKind)。
    */
-  agentKind?: 'cc' | 'codex' | 'pi' | null;
+  agentKind?: AgentKind | null;
   /** Structured guard details for a persisted tool-loop terminal error. */
   toolLoop?: ToolLoopErrorDetails;
   outputLimit?: OutputLimitDetails;

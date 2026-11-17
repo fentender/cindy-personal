@@ -87,6 +87,22 @@ function createSymlinkedSkill() {
 }
 
 describe('scanAllSkills', () => {
+  it('projects native Antigravity skills with their own engine label and project scope', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'skillhub-antigravity-'));
+    tempRoots.push(root);
+    const skillDir = path.join(root, '.agents', 'skills', 'native');
+    fs.mkdirSync(skillDir, { recursive: true });
+    fs.writeFileSync(path.join(skillDir, 'SKILL.md'), '---\nname: native\n---\nBody');
+    const maker = { listCustomizations: vi.fn(async () => ({ errors: [], items: [{
+      engine: 'antigravity', kind: 'skill', scope: 'repo', name: 'native', workingDir: root,
+      absolutePath: skillDir, mdPath: path.join(skillDir, 'SKILL.md'), runtimeStatus: 'discovered',
+    }] })) } as unknown as Maker;
+    const result = await scanAllSkills({ projects: [{ projectRoot: root, hash: 'native-project' }] }, maker);
+    expect(result.skills).toHaveLength(1);
+    expect(result.skills[0]).toMatchObject({ engine: 'antigravity', scope: 'project',
+      linkedEngines: [{ engine: 'antigravity', label: 'Antigravity', runtimeStatus: 'discovered' }] });
+  });
+
   it('keeps a nested namespace Skill in the local SkillHub projection', async () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'skillhub-nested-skill-'));
     tempRoots.push(root);

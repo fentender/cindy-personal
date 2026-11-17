@@ -215,7 +215,7 @@ function registryEffortMetadata(
   modelId: string,
   agent: AgentKind,
 ): RegistryEffortMetadata | undefined {
-  if (agent === "pi" || !registry) return undefined;
+  if (agent === "pi" || agent === "antigravity" || !registry) return undefined;
 
   // Stage 1 — exact lookup: only the original modelId.
   const exactMatches = expandedRegistryEntries(registry).filter((entry) =>
@@ -276,7 +276,7 @@ function registrySupportsFastMode(
 }
 
 /** 固定 agent 顺序：保证派生出的 provider.agents / routing / models 顺序稳定。 */
-const AGENT_ORDER: readonly AgentKind[] = ["claude-code", "codex", "pi"];
+const AGENT_ORDER = ["claude-code", "codex", "pi"] as const;
 
 /** 单个用户填写的模型 → CatalogModel（只从已声明的能力补推理档位）。 */
 function toCatalogModel(
@@ -459,7 +459,7 @@ export function buildUserProvider(
   const isOAuth = oauth !== undefined || !!native;
   const noAuth = config.auth?.method === "none";
   const strategy = nativeCodex ? "oauth-passthrough" : native ? "provider-oauth-header" : isOAuth ? "oauth-token" : noAuth ? "none" : "api-key-header";
-  const routing: Partial<Record<AgentKind, RoutingDescriptor>> = {};
+  const routing: Provider['routing'] = {};
   const models: Partial<Record<AgentKind, CatalogModel[]>> = {};
   const agents: AgentKind[] = [];
   for (const agent of AGENT_ORDER) {

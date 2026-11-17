@@ -112,6 +112,7 @@ const AGENT_LABEL: Record<AgentKind, string> = {
   'claude-code': 'Claude Code',
   codex: 'Codex',
   pi: 'Pi',
+  antigravity: 'Antigravity',
 };
 
 function presetRuntimeBaseUrl(
@@ -817,7 +818,21 @@ export function AddProviderWizard({
       setXaiDeviceLogin(selected.id === 'xai' && method === 'device');
       try {
         let ok = false;
-        if (id === 'openai' || id === 'anthropic' || id === 'xai' || preset) {
+        if (id === 'antigravity' && selected.source === 'builtin') {
+          const ownerId = crypto.randomUUID();
+          const login = { cancel: () => {
+            void window.electronAPI.maker.auth.cancelLogin('antigravity', { ownerId, releaseOwner: true })
+              .catch(() => toast.error(t('settings.providers.wizard.authorizeFailed', { name: selected.name })));
+          } };
+          localLoginRef.current = login;
+          try {
+            const result = await window.electronAPI.maker.auth.triggerLogin('antigravity', { ownerId });
+            if (localLoginRef.current !== login || result.errorReason === 'login_cancelled') return;
+            ok = result.authenticated;
+          } finally {
+            if (localLoginRef.current === login) localLoginRef.current = null;
+          }
+        } else if (id === 'openai' || id === 'anthropic' || id === 'xai' || preset) {
           const brand = id;
           const native = brand === 'openai' ? 'codex' as const : brand === 'anthropic' ? 'claude' as const : 'xai' as const;
           id = `${brand}-${crypto.randomUUID().slice(0, 8)}`;
@@ -2261,7 +2276,7 @@ export function AddProviderWizard({
                 const baseUrl = editedBase === detected.preset.runtimes[agent]?.baseUrl ? previous.baseUrl : editedBase;
                 const runtimes = { ...detected.config.runtimes };
                 const keys = { ...detected.keys };
-                for (const target of Object.keys(runtimes) as AgentKind[]) {
+                for (const target of Object.keys(runtimes) as Exclude<AgentKind, 'antigravity'>[]) {
                   const original = runtimes[target]!;
                   const followsAddress = original.baseUrl === previous.baseUrl;
                   const bound = sel.preset.runtimes[target];

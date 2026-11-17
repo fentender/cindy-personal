@@ -9,7 +9,8 @@ const route = { id: 'auto', name: 'Auto', target: { type: 'route' } };
 describe('parseGhostModelRoute', () => {
   const selected = { agentKind: 'pi', model: 'test-model', providerId: 'test-provider' };
 
-  it('preserves the explicit route and its request preferences, excluding unknown fields', () => {
+  it.each(['pi', 'antigravity'])('preserves the explicit %s route and its request preferences, excluding unknown fields', (agentKind) => {
+    const selected = { agentKind, model: 'test-model', providerId: 'test-provider' };
     expect(parseGhostModelRoute({ ...selected, agentDeviceId: 'other-computer', effort: 'high', fastMode: true, endpoint: 'ignored' }))
       .toEqual({ ...selected, agentDeviceId: 'other-computer', effort: 'high', fastMode: true });
     expect(parseGhostModelRoute(selected)).toEqual(selected);

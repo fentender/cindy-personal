@@ -55,6 +55,14 @@ function parse(result: XdtHelperToolResult) {
 }
 
 describe('send_to_session tool', () => {
+  it('dispatches native Antigravity task creation through the existing host callback', async () => {
+    const { registry, sendToSession } = setup();
+    const result = parse(await registry.call('send_to_session', {
+      message: 'Continue the work', agent_kind: 'antigravity', model: 'gemini-4-argon',
+    }));
+    expect(result).toMatchObject({ ok: true });
+    expect(sendToSession).toHaveBeenCalledWith(expect.objectContaining({ agentKind: 'antigravity', model: 'gemini-4-argon' }));
+  });
   // Unit contract: task host and provider location are independent; conflicting aliases
   // must fail before host dispatch, and uncertain creation returns an address to inspect.
   it('routes creation locations independently and preserves a recovery address', async () => {

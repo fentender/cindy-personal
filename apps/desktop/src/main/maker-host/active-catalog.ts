@@ -49,6 +49,7 @@ import { isDeepStrictEqual } from 'node:util';
 import { compatibilityProtocol } from '@cindy/model-compat/protocol';
 
 import {
+  ANTIGRAVITY_PROVIDER,
   BUNDLED_CATALOG,
   PI_REASONING_EFFORTS,
   buildUserProvider,
@@ -218,7 +219,7 @@ export interface XdGatewayModelInfo {
   cacheReadInputTokenCost?: number;
   cacheCreationInputTokenCost?: number;
   /** 进哪些 runtime tab；v3 由服务端完整下发。 */
-  agents?: AgentKind[];
+  agents?: Exclude<AgentKind, 'antigravity'>[];
   name?: string;
   group?: string;
   description?: string;
@@ -672,7 +673,7 @@ function projectCodexModelsToClaudeBridge(
 }
 
 /** 静态段被淘汰的供应商：先清空 providers.models，再由 discovery + Registry/local root 装配。 */
-const DYNAMIC_LIST_PROVIDER_IDS: ReadonlySet<string> = new Set(['anthropic', 'openai', 'xd']);
+const DYNAMIC_LIST_PROVIDER_IDS: ReadonlySet<string> = new Set(['anthropic', 'openai', 'xd', 'antigravity']);
 
 /**
  * Anthropic discovery 映射阶段读取的 Registry 字段子集：上游缺字段时先用它补齐，
@@ -700,7 +701,7 @@ function modelRegistryMetaFields(
 ): RegistryMetaFields | undefined {
   // 模型 registry 的路由与 perAgent 覆盖只按 claude-code / codex 建键;Pi 是动态 BYOM,
   // 无 registry per-agent 覆盖,按 agent 无关处理(取条目基线元数据)。
-  const registryAgent = agent === 'pi' ? undefined : agent;
+  const registryAgent = agent === 'pi' || agent === 'antigravity' ? undefined : agent;
   const catalog = base ?? BUNDLED_CATALOG;
   const matched = findModelRegistryRoute(catalog.modelRegistry, providerId, modelId, registryAgent);
   if (!matched) return undefined;
@@ -989,8 +990,8 @@ function materializeXaiAccountModels(
     // The server catalog may predate a client-known variant. Its bundled visibility
     // remains a sparse fallback; explicit server and later user choices still win.
     const bundledEntry = findModelRegistryRoute(BUNDLED_CATALOG.modelRegistry, 'xai', entry.id,
-      agent === 'pi' ? undefined : agent)?.entry;
-    const bundledDefaultEnabled = (agent === 'pi' ? undefined : bundledEntry?.perAgent?.[agent]?.defaultEnabled)
+      agent === 'pi' || agent === 'antigravity' ? undefined : agent)?.entry;
+    const bundledDefaultEnabled = (agent === 'pi' || agent === 'antigravity' ? undefined : bundledEntry?.perAgent?.[agent]?.defaultEnabled)
       ?? bundledEntry?.defaultEnabled;
     const { efforts, defaultEffort } = resolveXaiAccountCapabilities(
       entry,
@@ -1250,13 +1251,15 @@ function computeMerged(codexModels: readonly CatalogModel[] = discoveredCodex, c
   const bundledXai = BUNDLED_CATALOG.providers.find((provider) => provider.id === 'xai');
   const remoteXdIndex = b.providers.findIndex((provider) => provider.id === 'xd');
   const providerSources = b.providers
-    .filter((provider) => provider.id !== 'xd')
+    .filter((provider) => provider.id !== 'xd' && provider.id !== 'antigravity')
     // 远端目录若仍给 Claude 订阅声明 Codex / Pi 路由,按客户端合规边界收窄(见 builtin.ts)。
     .map(claudeSubscriptionOnlyForClaudeCode)
     .map((provider) =>
       projectProviderMediaModels(provider, b.modelRegistry, { addDeclared: true }),
     );
   if (xdShell) providerSources.splice(Math.max(0, remoteXdIndex), 0, xdShell);
+  // 原生引擎身份随客户端发布；型号仅从本机 CLI 回执注入。
+  providerSources.push(ANTIGRAVITY_PROVIDER);
   let providers: Provider[] = providerSources;
 
   // 先清零已退役的静态 providers.models 段：无论目录来自 bundled 还是远端，

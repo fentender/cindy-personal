@@ -238,6 +238,7 @@ export function selectVisibleModels(params: {
   deviceCcModels: ModelDescriptor[];
   deviceCodexModels: ModelDescriptor[];
   devicePiModels?: ModelDescriptor[];
+  deviceAntigravityModels?: ModelDescriptor[];
   /**
    * SSH 远程会话(remoteHostId)传 true:订阅直连模型(chatgpt/ / xai/)不再被过滤,
    * 而是保留在清单中由调用方按 isSubscriptionDirectModel 标记禁用(置灰 + 原因提示)。
@@ -263,6 +264,7 @@ export function selectVisibleModels(params: {
     deviceCcModels,
     deviceCodexModels,
     devicePiModels = [],
+    deviceAntigravityModels = [],
     excludeSubscriptionDirect,
     excludeChatBridgedCodex,
   } = params;
@@ -284,9 +286,11 @@ export function selectVisibleModels(params: {
   if (agentKind === 'claude-code') return cc;
   if (agentKind === 'codex') return codex;
   if (agentKind === 'pi') return pi;
+  const antigravity = deviceId ? deviceAntigravityModels : deriveModelsFromProviders(providers, 'antigravity');
+  if (agentKind === 'antigravity') return antigravity;
   const merged = [...cc];
   const seen = new Set(merged.map((m) => m.id));
-  for (const list of [codex, pi]) {
+  for (const list of [codex, pi, antigravity]) {
     for (const m of list) {
       if (seen.has(m.id)) continue;
       seen.add(m.id);
@@ -307,13 +311,15 @@ export function resolveVisibleModelAgentKind(params: {
   ccModels: ModelDescriptor[];
   codexModels: ModelDescriptor[];
   piModels?: ModelDescriptor[];
+  antigravityModels?: ModelDescriptor[];
   providers: ProviderView[];
 }): AgentKind | null {
-  const { modelId, agentKind, ccModels, codexModels, piModels = [], providers } = params;
+  const { modelId, agentKind, ccModels, codexModels, piModels = [], antigravityModels = [], providers } = params;
   if (agentKind) return agentKind;
   if (ccModels.some((model) => model.id === modelId)) return 'claude-code';
   if (codexModels.some((model) => model.id === modelId)) return 'codex';
   if (piModels.some((model) => model.id === modelId)) return 'pi';
+  if (antigravityModels.some((model) => model.id === modelId)) return 'antigravity';
   if (providers.some((provider) => providerOffersModel(provider, modelId, 'claude-code'))) {
     return 'claude-code';
   }
@@ -322,6 +328,9 @@ export function resolveVisibleModelAgentKind(params: {
   }
   if (providers.some((provider) => providerOffersModel(provider, modelId, 'pi'))) {
     return 'pi';
+  }
+  if (providers.some((provider) => providerOffersModel(provider, modelId, 'antigravity'))) {
+    return 'antigravity';
   }
   return null;
 }

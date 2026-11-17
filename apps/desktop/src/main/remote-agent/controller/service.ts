@@ -39,6 +39,7 @@ import { findReceivedShare, parseProviderShareAgentDeviceId, providerShareAccess
   onProviderShareReceivedChanged } from '../../device-link/providerShareGuest.js';
 import { credentialGrantFor } from '../executor/credentialGrants';
 import type { ExecutorCaptureHooks } from '../executor/executor';
+import type { KnownFileWriteCapture, OpaqueTurnChangeCapture } from '../../turn-change-set/store.js';
 import type { PdfTextExtractor } from '../executor/files';
 import type { GuardedFetch } from '../executor/webFetch';
 import { RemoteConnectionPool } from './connectionPool';
@@ -82,8 +83,8 @@ export interface DeviceAgentServiceDeps {
   managedSkills?: AgentDeps['getManagedSkills'];
   /** 本机停用的 Skill(与本机任务同一份偏好)。 */
   disabledSkillPaths?(): readonly string[];
-  captureKnownFileBefore(input: { sessionId: string; provider: 'claude-code' | 'pi'; cwd: string; targetPath: string }): Promise<void>;
-  noteOpaqueTurnChange(input: { sessionId: string; provider: 'claude-code' | 'pi'; cwd: string }): void;
+  captureKnownFileBefore(input: KnownFileWriteCapture): Promise<void>;
+  noteOpaqueTurnChange(input: OpaqueTurnChangeCapture): void;
   /** 改写来自对方的事件(如 Claude Code 的 Cindy 工具名换回自带工具名)。 */
   mapEvent?: (kind: AgentKind) => ((event: AgentEvent) => AgentEvent) | undefined;
   /** Read 读 PDF 时取文字。 */

@@ -114,21 +114,21 @@ describe('modelEnginePrefs store', () => {
     expect(memStorage.getItem(m.__STORAGE_KEY)).toBeNull();
   });
 
-  it('set/get 往返 + 同步落盘 + 跨重启恢复', async () => {
+  it.each(['cc', 'antigravity'] as const)('%s set/get 往返 + 同步落盘 + 跨重启恢复', async agent => {
     const m1 = await loadModule();
-    m1.setModelEngineOverride('xd', 'gpt-5.5', 'cc');
-    expect(m1.getModelEngineOverride('xd', 'gpt-5.5')).toBe('cc');
+    m1.setModelEngineOverride('xd', 'gpt-5.5', agent);
+    expect(m1.getModelEngineOverride('xd', 'gpt-5.5')).toBe(agent);
     expect(m1.hasModelEngineOverride('xd', 'gpt-5.5')).toBe(true);
     expect(m1.hasAnyModelEngineOverride()).toBe(true);
     // 同步写:调用返回时已经落盘(不能靠 debounce / 微任务)。
     expect(JSON.parse(memStorage.getItem(m1.__STORAGE_KEY) ?? '{}')).toEqual({
-      'xd:gpt-5.5': { agent: 'cc' },
+      'xd:gpt-5.5': { agent },
     });
 
     // 模拟 app 重启(重置模块缓存后重新从 localStorage 加载)。
     vi.resetModules();
     const m2 = await loadModule();
-    expect(m2.getModelEngineOverride('xd', 'gpt-5.5')).toBe('cc');
+    expect(m2.getModelEngineOverride('xd', 'gpt-5.5')).toBe(agent);
   });
 
   it('同一模型在不同来源下互不覆盖', async () => {

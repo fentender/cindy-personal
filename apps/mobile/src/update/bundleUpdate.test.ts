@@ -26,6 +26,13 @@ const UNSUPPORTED_VERSIONS = [
   '1.0.9007199254740992',
 ];
 
+it.each([undefined, 'same-runtime'])('discovers APK-only releases independently of Expo runtime (%s)', (runtime) => {
+  const result = evaluateBundleUpdate({ currentVersion: '1.1.0', currentRuntimeVersion: runtime,
+    latest: { ...VALID, runtimeVersion: runtime ?? '', delivery: 'apk' } });
+  expect(result.needsUpdate).toBe(true);
+  expect(result.forced).toBe(false);
+});
+
 describe('shouldCheckBundleUpdate', () => {
   it.each([
     ['非自建分发', false, false, false, false],

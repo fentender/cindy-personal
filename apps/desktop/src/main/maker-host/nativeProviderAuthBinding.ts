@@ -27,6 +27,7 @@ const NATIVE_PROVIDER_IDS = [
   'anthropic',
   'openai',
   'xai',
+  'antigravity',
 ] as const satisfies readonly NativeProviderId[];
 type BindingFile = Partial<Record<NativeProviderId, string>> & {
   legacyClaimOwner?: string;
@@ -921,7 +922,7 @@ export function migrateLocalNativeProviderAuthBindings(ownerId: string): boolean
   const snapshotBindings = snapshot.bindings;
   if (
     snapshotBindings.legacyClaimOwner === normalizedOwnerId &&
-    !(['anthropic', 'openai'] as const).some(
+    !(['anthropic', 'openai', 'antigravity'] as const).some(
       (provider) =>
         !(snapshotBindings.revoked && provider in snapshotBindings.revoked) &&
         snapshotBindings[provider] === LOCAL_DATA_OWNER_ID,
@@ -943,7 +944,7 @@ export function migrateLocalNativeProviderAuthBindings(ownerId: string): boolean
 
     const next: BindingFile = { ...bindings };
     let migrated = false;
-    for (const provider of ['anthropic', 'openai'] as const) {
+    for (const provider of ['anthropic', 'openai', 'antigravity'] as const) {
       if (bindings.revoked && provider in bindings.revoked) continue;
       if (bindings[provider] !== LOCAL_DATA_OWNER_ID) continue;
       next[provider] = normalizedOwnerId;

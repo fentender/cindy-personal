@@ -44,6 +44,7 @@ export default defineConfig(({ mode }) => {
           : [],
     },
     define: {
+      'process.env.CINDY_PERSONAL_RELEASE_REPOSITORY': JSON.stringify(readMainEnv('CINDY_PERSONAL_RELEASE_REPOSITORY')),
       'import.meta.env.VITE_CINDY_AUTH_REGION': JSON.stringify(
         readViteEnv('VITE_CINDY_AUTH_REGION'),
       ),

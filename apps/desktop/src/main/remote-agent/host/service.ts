@@ -1495,7 +1495,7 @@ export function installRemoteAgentHost(options: {
             finally { if (timer) clearTimeout(timer); }
           }
           if (!valid()) return {};
-          const plan = (avoid: ReadonlySet<string>) => groupRelay.plan({ kind: route.agentKind as 'claude-code' | 'codex' | 'pi',
+          const plan = (avoid: ReadonlySet<string>) => groupRelay.plan({ kind: route.agentKind as 'claude-code' | 'codex' | 'pi' | 'antigravity',
             model: route.model, providerId: route.groupProviderId,
             exclude: avoid, reshareKey: reshareKeyForGuest(controller) }).catch(() => null);
           let next = await plan(canChangeAccount ? new Set() : exclude);
@@ -1512,7 +1512,7 @@ export function installRemoteAgentHost(options: {
             }
           }
           const canMove = next?.kind === 'member' || (next?.kind === 'local'
-            && options.getMaker().listAvailableAgents().includes(route.agentKind as 'claude-code' | 'codex' | 'pi'));
+            && options.getMaker().listAvailableAgents().includes(route.agentKind as 'claude-code' | 'codex' | 'pi' | 'antigravity'));
           if (!valid() || !next || !canMove || (next.kind === 'member' && exclude.has(next.memberKey))) return {};
           const token = host?.issueDirectGroupSwitchToken(controller, request.sessionId,
             exclude);

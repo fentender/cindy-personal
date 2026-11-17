@@ -25,6 +25,7 @@ vi.mock('@/components/icons/ProviderLogoMark', () => ({
 }));
 import { AddProviderWizard } from '@/components/settings/AddProviderWizard';
 import { createCustomProvider } from '@/lib/customProviders';
+import { toast } from '@/lib/toast';
 
 const provider = (id: string): ProviderView => ({
   id,
@@ -91,6 +92,32 @@ afterEach(() => {
 });
 
 describe('AddProviderWizard — explicit subscription account choice', () => {
+  it.each(['complete', 'close'] as const)('uses the native Antigravity login and releases ownership on %s', async (outcome) => {
+    const native: ProviderView = { ...provider('antigravity'), name: 'Antigravity', agents: ['antigravity'], routing: { antigravity: { transport: 'acp', authStrategy: 'oauth-passthrough' } } };
+    const onDone = vi.fn();
+    let finish!: (result: { authenticated: boolean }) => void;
+    const triggerLogin = vi.fn<typeof window.electronAPI.maker.auth.triggerLogin>(() => new Promise<{ authenticated: boolean }>(resolve => { finish = resolve; }));
+    const cancelLogin = vi.fn(async () => undefined);
+    window.electronAPI.maker.auth = { ...window.electronAPI.maker.auth, triggerLogin, cancelLogin };
+    const view = render(<AddProviderWizard providers={[native]} entry={{ kind: 'builtin', providerId: native.id }} onDone={onDone} onClose={vi.fn()} onOpenCustomForm={vi.fn()} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'settings.providers.button.authorize' }));
+    await waitFor(() => expect(triggerLogin).toHaveBeenCalledWith('antigravity', { ownerId: expect.any(String) }));
+    if (outcome === 'close') view.unmount();
+    await act(async () => { finish({ authenticated: true }); });
+    if (outcome === 'complete') {
+      expect(triggerLogin).toHaveBeenCalledTimes(1);
+      expect(cancelLogin).not.toHaveBeenCalled();
+      expect(toast.error).not.toHaveBeenCalled();
+      await waitFor(() => expect(onDone).toHaveBeenCalledExactlyOnceWith('antigravity'));
+    }
+    else {
+      expect(cancelLogin).toHaveBeenCalledWith('antigravity', { releaseOwner: true, ownerId: triggerLogin.mock.calls[0]![1]!.ownerId });
+      expect(onDone).not.toHaveBeenCalled();
+    }
+    expect(createCustomProvider).not.toHaveBeenCalled();
+    expect(window.electronAPI.maker.providerOAuthLogin).not.toHaveBeenCalled();
+  });
+
   it.each(
     ['anthropic', 'openai'].flatMap((providerId) =>
       ['default', 'new'].map((target) => ({ providerId, target })),

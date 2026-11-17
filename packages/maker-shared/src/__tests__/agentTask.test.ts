@@ -96,6 +96,12 @@ describe('subagentSpawnResultIndicatesRunning', () => {
 });
 
 describe('normalizeAgentTaskUpdate', () => {
+  it('retains native Antigravity identity from either the payload or event source', () => {
+    expect(normalizeAgentTaskUpdate({ taskId: 'native-task', provider: 'antigravity', status: 'running' }))
+      .toMatchObject({ provider: 'antigravity', taskId: 'native-task' });
+    expect(normalizeAgentTaskUpdate({ taskId: 'native-task' }, 'antigravity'))
+      .toMatchObject({ provider: 'antigravity' });
+  });
   it('returns null without a taskId or parentToolUseId', () => {
     expect(normalizeAgentTaskUpdate(null)).toBeNull();
     expect(normalizeAgentTaskUpdate({})).toBeNull();

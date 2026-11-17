@@ -1238,7 +1238,7 @@ async function requestBuiltinProviderText(
   };
   if (input.signal?.aborted) return cancelledUtilityTextResult(profile);
   const routing = input.provider.routing[input.agentKind];
-  if (!routing) {
+  if (!routing || routing.transport === 'acp') {
     return { ok: false, reason: 'no_candidate', attempts: [skippedAttempt(profile, 'agent_unavailable')] };
   }
   // 内置供应商同样要尊重 routing.disabled:目录钉指向的 runtime 被停用后,
@@ -2120,6 +2120,7 @@ function utilityRequestPlan(input: {
   /** Some coding-specialized models reject their wire's reasoning field. */
   supportsReasoning?: boolean;
 }): Pick<Parameters<typeof requestProviderHttpText>[0], 'steps' | 'memoryKey' | 'compat'> {
+  if (input.agentKind === 'antigravity') throw new Error('Native ACP models require an agent session');
   const harness: CompatibilityHarness = input.agentKind;
   let mode: UtilityReasoningMode;
   if (input.disableReasoning) {

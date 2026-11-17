@@ -24,7 +24,7 @@ const {
 
 // 本地 Xcode / Simulator 与 self-host release 共用同一份地区构建配置。EAS 云端看不到
 // gitignored 的真文件,因此不启用 CINDY_USE_LOCAL_REGION_CONFIG 时继续走 eas.json / EAS env。
-function loadRegionBuildConfig(region, { selfHosted = false } = {}) {
+function loadRegionBuildConfig(region, { selfHosted = false, personalRelease = false } = {}) {
   const dir = path.join(__dirname, 'scripts');
   const configured = process.env.CINDY_SELF_HOST_REGIONS_FILE?.trim();
   const real = configured
@@ -59,7 +59,7 @@ function loadRegionBuildConfig(region, { selfHosted = false } = {}) {
   // TapDB 只在自建发布线强制非空:漏填会静默发出无统计的正式包。本地 Xcode /
   // Simulator 构建允许留空——运行时统计模块对缺失配置自动 no-op(mobileTapdb.ts),
   // 外部开发者无需 TapDB 账号即可本地构建。
-  if (selfHosted && !(block.tapdb?.clientId?.trim() && block.tapdb?.clientToken?.trim())) {
+  if (selfHosted && !personalRelease && !(block.tapdb?.clientId?.trim() && block.tapdb?.clientToken?.trim())) {
     throw new Error(
       `${path.basename(file)} 缺少 region "${region}" 的 tapdb.clientId/clientToken`,
     );
@@ -263,11 +263,16 @@ module.exports = (context = {}) => {
   // 基址只需通过上面的 EXPO_PUBLIC_* 环境变量进入 Metro bundle；不要把它追加到
   // extra，否则本次纯 JS 登录路由会无意要求一次冷构建，并切断旧 runtime 的 OTA 链。
   const selfHosted = process.env.EXPO_PUBLIC_XDT_OTA_SELFHOST === '1';
+  const personalRelease = Boolean(process.env.EXPO_PUBLIC_CINDY_PERSONAL_RELEASE_REPOSITORY?.trim());
+  const personalVersion = process.env.CINDY_PERSONAL_RELEASE_VERSION?.trim();
+  if (personalRelease && (!selfHosted || !/^\d+\.\d+\.\d+$/.test(personalVersion || ''))) {
+    throw new Error('Personal release requires self-host APK mode and CINDY_PERSONAL_RELEASE_VERSION=x.y.z');
+  }
   const usesLocalRegionConfig =
     process.env.CINDY_USE_LOCAL_REGION_CONFIG === '1';
   const usesRegionConfig = selfHosted || usesLocalRegionConfig;
   const regionBuildConfig = usesRegionConfig
-    ? loadRegionBuildConfig(region, { selfHosted })
+    ? loadRegionBuildConfig(region, { selfHosted, personalRelease })
     : null;
   const builtInRegional = REGION_CONFIG[region];
   let regional = builtInRegional;
@@ -374,6 +379,9 @@ module.exports = (context = {}) => {
   // 构建与运行时严格对齐。原生恢复模式另用非 EXPO_PUBLIC 构建开关显式启用。
   if (selfHosted) {
     const nativeOta = process.env.CINDY_MOBILE_OTA_NATIVE?.trim();
+    if (personalRelease && nativeOta === '1') {
+      throw new Error('Personal releases use APK updates, not native OTA');
+    }
     if (nativeOta && nativeOta !== '0' && nativeOta !== '1') {
       throw new Error('CINDY_MOBILE_OTA_NATIVE must be 0 or 1');
     }
@@ -426,5 +434,10 @@ module.exports = (context = {}) => {
     }
   }
 
+  if (personalRelease) {
+    // 个人渠道用同签名整包升级，禁用官方 JS OTA，避免混入另一条发行线。
+    next = { ...next, name: 'Cindy Personal', version: personalVersion,
+      updates: { ...next.updates, enabled: false } };
+  }
   return next;
 };

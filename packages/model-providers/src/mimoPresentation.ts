@@ -44,7 +44,7 @@ export function isMimoTokenPlanProvider(
   );
   return (
     routes.length > 0 &&
-    routes.every((route) => isMimoTokenPlanUrl(route.upstream)) &&
+    routes.every((route) => route.transport !== 'acp' && isMimoTokenPlanUrl(route.upstream)) &&
     Object.values(provider.models).every((models) =>
       (models ?? []).every(
         (model) => !model.route || isMimoTokenPlanUrl(model.route.baseUrl),

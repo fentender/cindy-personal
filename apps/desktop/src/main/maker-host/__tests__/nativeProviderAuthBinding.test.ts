@@ -483,22 +483,22 @@ describe('local → cloud native provider binding migration', () => {
     expect(claimDetectedNativeProviderAuth('openai', () => true)).toBe(false);
   });
 
-  it('moves local-mode Harness bindings to the first cloud owner and preserves source metadata', () => {
+  it.each(['openai', 'antigravity'] as const)('moves local-mode %s bindings to the first cloud owner and preserves source metadata', (provider) => {
     session.dataOwnerId = 'local-v1';
-    expect(claimDetectedNativeProviderAuth('openai', () => true)).toBe(true);
+    expect(claimDetectedNativeProviderAuth(provider, () => true)).toBe(true);
     expect(JSON.parse(fs.readFileSync(bindingFile, 'utf8'))).toMatchObject({
-      openai: 'local-v1',
-      sources: { openai: 'native-harness-inherited' },
+      [provider]: 'local-v1',
+      sources: { [provider]: 'native-harness-inherited' },
     });
 
     session.dataOwnerId = 'owner-a';
     expect(migrateLocalNativeProviderAuthBindings('owner-a')).toBe(true);
     expect(JSON.parse(fs.readFileSync(bindingFile, 'utf8'))).toMatchObject({
-      openai: 'owner-a',
+      [provider]: 'owner-a',
       legacyClaimOwner: 'owner-a',
-      sources: { openai: 'native-harness-inherited' },
+      sources: { [provider]: 'native-harness-inherited' },
     });
-    expect(isNativeProviderAuthBound('openai')).toBe(true);
+    expect(isNativeProviderAuthBound(provider)).toBe(true);
   });
 
   it('avoids the mutation lock when no local binding can move', () => {
@@ -555,6 +555,22 @@ describe('local → cloud native provider binding migration', () => {
 });
 
 describe('claimDetectedNativeProviderAuth', () => {
+  // 原生 Antigravity 继承 CLI 登录，但不能跨 Cindy 主人或在主动断开后自动重新认领。
+  it('retains Antigravity owner binding and revocation through persisted reads', () => {
+    expect(claimDetectedNativeProviderAuth('antigravity', () => true)).toBe(true);
+    expect(isNativeProviderAuthBound('antigravity')).toBe(true);
+    expect(getNativeProviderAuthSource('antigravity')).toBe('native-harness-inherited');
+    session.dataOwnerId = 'owner-b';
+    expect(isNativeProviderAuthBound('antigravity')).toBe(false);
+    expect(claimDetectedNativeProviderAuth('antigravity', () => true)).toBe(false);
+    session.dataOwnerId = 'owner-a';
+    unbindNativeProviderAuth('antigravity', { revoked: true });
+    expect(isNativeProviderAuthRevoked('antigravity')).toBe(true);
+    expect(claimDetectedNativeProviderAuth('antigravity', () => true)).toBe(false);
+    bindNativeProviderAuth('antigravity', { sharedSystem: true });
+    expect(isNativeProviderAuthBound('antigravity')).toBe(true);
+    expect(isNativeProviderAuthRevoked('antigravity')).toBe(false);
+  });
   it('repairs the binding when the one-shot migration consumed the claim before the credential appeared', () => {
     // 复现主 bug:legacy 迁移在 reconcile 硬链建立之前跑掉,openai 名额以 false 被消费。
     migrateLegacyNativeProviderAuthBindings('owner-a', { openai: false });

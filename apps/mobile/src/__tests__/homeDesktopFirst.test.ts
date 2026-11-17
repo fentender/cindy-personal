@@ -502,7 +502,7 @@ describe('mobile home desktop-first surface', () => {
     expect(vendorIconSource).toContain("import { MobileAgentMark } from './MobileAgentMark';");
     // vendor → Agent mark 的映射要带上 pi,不能把 π 吞成 Claude 脸。
     expect(vendorIconSource).toContain(
-      "const agentKind: AgentMarkKind = vendor === 'codex' || vendor === 'pi' ? vendor : 'claude-code';",
+      "const agentKind: AgentMarkKind = vendor === 'codex' || vendor === 'pi' || vendor === 'antigravity' ? vendor : 'claude-code';",
     );
     expect(vendorIconSource).toContain('<MobileAgentMark agentKind={agentKind} color={color} size={size} />');
     expect(vendorIconSource).not.toContain('viewBox="136 137 282 158"');

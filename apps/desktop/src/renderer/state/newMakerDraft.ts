@@ -105,7 +105,7 @@ export interface CollabWorkerConfig {
 
 export interface CollabDraft {
   enabled: boolean;
-  worker: 'cc' | 'codex' | 'pi';
+  worker: 'cc' | 'codex' | 'pi' | 'antigravity';
   workerConfig?: CollabWorkerConfig;
 }
 
@@ -220,6 +220,16 @@ export interface NewMakerDraft {
  * 在目录里都是默认隐藏的模型 —— 种子默认模型压根不在用户看到的清单里。
  */
 function defaultVendorPrefs(vendor: MakerVendor): VendorPrefs {
+  if (vendor === 'antigravity') {
+    return {
+      model: getDefaultModelForVendor('antigravity').id,
+      effort: 'medium',
+      permissionMode: 'auto',
+      permissionModeCustomized: false,
+      planMode: false,
+      providerId: 'antigravity',
+    };
+  }
   if (vendor === 'pi') {
     return {
       // pi 走 XD 网关(anthropic-messages 可达面),默认给网关中档模型;
@@ -283,6 +293,7 @@ function makeDefault(): NewMakerDraft {
       pi: defaultVendorPrefs('pi'),
       orca: defaultVendorPrefs('orca'),
       codex: defaultVendorPrefs('codex'),
+      antigravity: defaultVendorPrefs('antigravity'),
     },
     modelChosenByVendor: {},
     defaultTupleCustomized: false,
@@ -427,7 +438,7 @@ function sanitize(raw: unknown): NewMakerDraft {
       ? (r.modelChosenByVendor as Record<string, unknown>)
       : {};
   const modelChosenByVendor: Partial<Record<MakerVendor, boolean>> = {};
-  for (const v of ['cc', 'orca', 'codex', 'pi'] as const) {
+  for (const v of ['cc', 'orca', 'codex', 'pi', 'antigravity'] as const) {
     if (modelChosenRaw[v] === true) modelChosenByVendor[v] = true;
   }
   // 老版本没有独立的组合标记：显式选过模型/来源/思考深度/Fast 都是足够强的
@@ -524,6 +535,7 @@ function sanitize(raw: unknown): NewMakerDraft {
       pi: sanitizeVendorPrefs(lastByVendorRaw.pi, 'pi'),
       orca: sanitizeVendorPrefs(lastByVendorRaw.orca, 'orca'),
       codex: sanitizeVendorPrefs(lastByVendorRaw.codex, 'codex'),
+      antigravity: sanitizeVendorPrefs(lastByVendorRaw.antigravity, 'antigravity'),
     },
     modelChosenByVendor,
     defaultTupleCustomized,
@@ -1090,7 +1102,7 @@ export function fallbackUnavailableVendor(availableVendors: ReadonlySet<MakerVen
 }
 
 export interface SuggestedDefaultTuple {
-  vendor: Extract<MakerVendor, 'cc' | 'codex' | 'pi'>;
+  vendor: Extract<MakerVendor, 'cc' | 'codex' | 'pi' | 'antigravity'>;
   providerId: string;
   model: string;
   effort?: Effort | null;

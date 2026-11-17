@@ -21,6 +21,11 @@ const model = {
   providerId: "openai",
 };
 
+it('preserves native Antigravity worker role selections', () => {
+  const native = { ...model, agent: 'antigravity', model: 'gemini-4-argon', providerId: 'antigravity' };
+  expect(parseOrcaWorkerRoles({ roles: [{ role: 'researcher', model: native }] })).toEqual({ roles: [{ role: 'researcher', model: native }] });
+});
+
 it("lets same-account controllers read and change the host's worker roles", () => {
   expect(REMOTE_INVOKE_ALLOWLIST.has(ORCA_WORKER_ROLES_GET)).toBe(true);
   expect(REMOTE_INVOKE_ALLOWLIST.has(ORCA_WORKER_ROLES_APPLY)).toBe(true);

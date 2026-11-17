@@ -290,19 +290,19 @@ describe('create_worker tool', () => {
     }));
   });
 
-  it('accepts pi as a first-class worker agent and passes it through to host', async () => {
+  it.each(['pi', 'antigravity'] as const)('accepts %s as a first-class worker agent and passes it through to host', async (agent) => {
     const { registry, createWorker } = setup();
 
     const res = await registry.call('create_worker', {
       role: 'developer',
-      agent: 'pi',
+      agent,
       label: 'pi_dev_1',
     });
 
     expect(res.isError).toBeUndefined();
     expect(parse(res)).toMatchObject({ ok: true, label: 'pi_dev_1' });
     expect(createWorker).toHaveBeenCalledWith(expect.objectContaining({
-      agent: 'pi',
+      agent,
       label: 'pi_dev_1',
     }));
   });

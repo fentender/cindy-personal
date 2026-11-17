@@ -3,13 +3,33 @@ import { describe, expect, it } from 'vitest';
 
 import {
   BOT_MODEL_CHAIN_MAX,
+  botModelRouteRuntimeKey,
   nextBotModelRoute,
+  normalizeBotHarness,
   normalizeBotModelChain,
   normalizeBotProfileModelChain,
   primaryBotModelRoute,
 } from '../botModelChain';
 
 describe('Bot model chain', () => {
+  it('preserves the native Antigravity route through profile persistence and remote serialization', () => {
+    const route = {
+      harness: 'antigravity' as const,
+      model: 'gemini-4-argon',
+      providerId: 'antigravity',
+      effort: 'medium',
+      fastMode: false,
+      agentDeviceId: 'native-host',
+    };
+    const profile = normalizeBotProfileModelChain({ modelChain: [route] });
+
+    expect(profile).toMatchObject({ ...route, modelChain: [route] });
+    expect(normalizeBotHarness(profile.harness)).toBe('antigravity');
+    const restored = normalizeBotModelChain(JSON.parse(serializeModelRoutes(profile.modelChain as [typeof route])));
+    expect(restored).toEqual([route]);
+    expect(botModelRouteRuntimeKey(restored[0]!)).toBe('antigravity\u0000antigravity\u0000gemini-4-argon\u0000native-host');
+  });
+
   it('keeps a legacy single-model Bot as a one-route chain', () => {
     expect(
       normalizeBotModelChain(undefined, {

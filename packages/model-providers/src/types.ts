@@ -22,7 +22,7 @@ import type { ModelMetadata } from "./modelMetadataLayers.js";
 import type { ModelRegistry } from "./modelAccessBean.js";
 
 /** 承载模型的 agent runtime —— 与 maker-core AgentKind 对齐。 */
-export type AgentKind = "claude-code" | "codex" | "pi";
+export type AgentKind = "claude-code" | "codex" | "pi" | "antigravity";
 
 /** 推理强度档位 —— 与 maker-core Effort 对齐。 */
 export type Effort =
@@ -190,7 +190,7 @@ export type OAuthProviderDescriptor =
  * 路由描述符（per provider × runtime）。喂给 host 侧通用路由器，决定请求的
  * 真实上游 + 鉴权 + model id 还原。加新供应商 = 加这份数据，不改路由器代码。
  */
-export interface RoutingDescriptor {
+interface RoutingOptions {
   modelInterface?: ModelInterfaceSnapshot;
   /**
    * 上游 wire protocol。Claude Code / Codex 缺省保持历史语义；Pi 必须显式声明。
@@ -214,8 +214,6 @@ export interface RoutingDescriptor {
   videoApi?: ProviderVideoApi;
   /** Enterprise BYOK image model binding used by the Codex Images route. */
   imageModel?: { wireModel: string; litellmModel: string; supportsEdit: boolean };
-  /** 真实上游 base URL（direct 时是供应商自家；gateway 时是 XD 网关 base）。 */
-  upstream: string;
   /**
    * 推理请求的精确相对路径（可选，必须以单个 `/` 开头）。
    *
@@ -265,6 +263,17 @@ export interface RoutingDescriptor {
    * 且前缀集合覆盖全部声明的模型 id —— 新增这类供应商时忘声明会被测试直接拦下。
    */
   modelPrefixes?: string[];
+}
+
+/** HTTP 路由的真实上游地址；原生 ACP 另由 NativeRoutingDescriptor 描述。 */
+export interface RoutingDescriptor extends RoutingOptions {
+  transport?: 'http';
+  upstream: string;
+}
+
+export interface NativeRoutingDescriptor extends RoutingOptions {
+  transport: 'acp';
+  upstream?: never;
 }
 
 /**
@@ -388,7 +397,7 @@ export interface CatalogModel {
    * 缺省排到末尾。仅影响选择器展示顺序，不影响 host 派生的 availableModels 数组序（后者保序）。
    */
   sortOrder?: number;
-  /** 上下文窗口（tokens）。该 agent 下的权威值(host 派生进 ModelDescriptor.contextWindow)。 */
+  /** 上下文窗口（tokens）；原生 Antigravity 未报告时为 0，不能用于裁剪上下文。 */
   contextWindow: number;
   /** Host-owned explicit working budget. Kept separate from the catalog default for settings. */
   contextWindowOverride?: number;
@@ -603,7 +612,9 @@ export interface Provider {
    */
   titleModel?: string;
   /** ★路由描述符，按 agent 索引（供应商可同时供多个 agent）。 */
-  routing: Partial<Record<AgentKind, RoutingDescriptor>>;
+  routing: Partial<Record<Exclude<AgentKind, 'antigravity'>, RoutingDescriptor>> & {
+    antigravity?: NativeRoutingDescriptor;
+  };
   /**
    * ★该供应商提供的模型清单，**按 agent 分组**（同 id 在不同 agent 下元数据可不同，
    * 如 gpt-5.5 cc=1M / codex=272k）。`agents` 里声明的每个 agent 都应有对应数组（见 catalog.ts 校验）。

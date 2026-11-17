@@ -60,13 +60,13 @@ describe('im default settings store', () => {
     expect(readImDefaultSettings('feishu').groupPermissionMode).toBe('bypassPermissions');
     expect(JSON.parse(fs.readFileSync(settingsFile(), 'utf-8')).channels.feishu).toEqual({ groupPermissionMode: 'bypassPermissions' });
   });
-  it('persists the shared location per channel and can switch back to local', () => {
-    const route = { ...IM_DEFAULT_SETTINGS.agents.codex, providerId: 'openai', agentDeviceId: 'share:alice' };
-    writeImDefaultSettingsPatch({ agentKind: 'codex', agents: { codex: route } }, 'feishu');
-    expect(readImDefaultSettings('feishu').agents.codex).toEqual(route);
-    expect(readImDefaultSettings('telegram').agents.codex.agentDeviceId).toBeUndefined();
-    writeImDefaultSettingsPatch({ agents: { codex: { ...route, agentDeviceId: null } } }, 'feishu');
-    expect(readImDefaultSettings('feishu').agents.codex.agentDeviceId).toBeUndefined();
+  it.each(['codex', 'antigravity'] as const)('persists the shared %s location per channel and can switch back to local', (agentKind) => {
+    const route = { ...IM_DEFAULT_SETTINGS.agents[agentKind], providerId: agentKind === 'codex' ? 'openai' : 'antigravity', agentDeviceId: 'share:alice' };
+    writeImDefaultSettingsPatch({ agentKind, agents: { [agentKind]: route } }, 'feishu');
+    expect(readImDefaultSettings('feishu').agents[agentKind]).toEqual(route);
+    expect(readImDefaultSettings('telegram').agents[agentKind].agentDeviceId).toBeUndefined();
+    writeImDefaultSettingsPatch({ agents: { [agentKind]: { ...route, agentDeviceId: null } } }, 'feishu');
+    expect(readImDefaultSettings('feishu').agents[agentKind].agentDeviceId).toBeUndefined();
   });
   beforeEach(() => {
     scopeMocks.dir = settingsDir;
@@ -195,6 +195,7 @@ describe('im default settings store', () => {
     // Legacy flat fields mirror global route for backward compatibility
     expect(persisted.agentKind).toBe(IM_DEFAULT_SETTINGS.agentKind);
     expect(persisted.agents).toEqual({
+      antigravity: IM_DEFAULT_SETTINGS.agents.antigravity,
       'claude-code': {
         providerId: 'anthropic',
         model: 'claude-sonnet-4-8',

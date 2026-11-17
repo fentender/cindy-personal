@@ -90,6 +90,21 @@ function legacyCatalog(): Catalog {
 }
 
 describe('active-catalog discovered augment', () => {
+  // 远端目录尚未发布新引擎时，本机 CLI 回执仍须进入实际选择目录；撤销回执不能复活旧型号。
+  it('keeps native Antigravity discovery across remote catalog refreshes and clears removed models', () => {
+    const remote = bundledWithoutRegistry();
+    remote.providers = remote.providers.filter(p => p.id !== 'antigravity');
+    setActiveCatalog(remote);
+    const native = { ...fake('gemini-4-argon'), contextWindow: 0, contextWindowVerified: false };
+    setDiscoveredProviderModels('antigravity', 'antigravity', [native]);
+    const read = () => getActiveCatalog().providers.find(p => p.id === 'antigravity');
+    expect(read()?.models.antigravity).toEqual([native]);
+    setActiveCatalog({ ...remote, version: 'updated' });
+    expect(read()?.models.antigravity).toEqual([native]);
+    setDiscoveredProviderModels('antigravity', 'antigravity', []);
+    expect(read()?.models.antigravity).toEqual([]);
+    expect(read()?.routing.antigravity?.upstream).toBeUndefined();
+  });
   it('keeps a future subscription model inherited window unverified', () => {
     setActiveCatalog(structuredClone(BUNDLED_CATALOG));
     setDiscoveredCodexModels([{ ...fake('gpt-7-sol'), discoveredMetadata: {}, contextWindowVerified: false }]);

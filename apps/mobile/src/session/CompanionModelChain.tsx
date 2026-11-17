@@ -83,7 +83,7 @@ export function CompanionModelPicker({ visible, deviceId, route, onClose, onClos
     flatOptions={[]} agentKind={agent} capabilities={null} activeModelId={route?.model ?? ''} selectedProviderId={route?.providerId ?? null}
     selectedEffort={route?.effort ?? ''} selectedFastMode={route?.fastMode ?? false} existingSessionRoute
     disabled={!catalog.ready} loading={catalog.loading} emptyHint={catalog.error ?? t('devices.companionProfile.modelsUnavailable')}
-    unified={{ remote: { catalogs: remoteCatalogs, selectedDeviceId: route?.agentDeviceId ?? null, hostDeviceId: deviceId }, scope: JSON.stringify([user?.id, deviceId]), agents: ['claude-code', 'codex', 'pi'],
+    unified={{ remote: { catalogs: remoteCatalogs, selectedDeviceId: route?.agentDeviceId ?? null, hostDeviceId: deviceId }, scope: JSON.stringify([user?.id, deviceId]), agents: ['claude-code', 'codex', 'pi', 'antigravity'],
       loadCapabilities: async agent => { const value = normalizeMobileAgentCapabilities(await maker.getCapabilities(agent)); if (!value) throw new Error('Capabilities unavailable'); return value; }, onSelect: select }}
     onSelectFlatModel={() => {}} onSelectProviderRow={() => {}} permissionOptions={[]} activePermissionMode="ask" onSelectPermissionMode={() => {}} hidePermissionTrigger keyboardAvoidingBehavior="padding" />;
 }

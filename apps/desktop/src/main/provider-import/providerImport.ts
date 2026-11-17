@@ -60,7 +60,7 @@ const MAX_HEADERS_PER_ENDPOINT = 24;
 const MAX_TEXT_LENGTH = 2 * 1024;
 const MAX_DRAFTS = 128;
 const PROVIDER_ID_RE = /^[a-z0-9_-]{1,40}$/;
-const AGENTS: readonly AgentKind[] = ['claude-code', 'codex', 'pi'];
+const AGENTS = ['claude-code', 'codex', 'pi'] as const satisfies readonly AgentKind[];
 const PROTOCOLS: readonly ProviderWireProtocol[] = [
   'anthropic-messages',
   'openai-responses',
@@ -375,7 +375,7 @@ function parseEndpoint(value: unknown, index: number, maxModels: number): Parsed
     if (!Array.isArray(endpoint.targets) || endpoint.targets.length === 0)
       fail(`${label}.targets must be a non-empty array`);
     targets = endpoint.targets.map((target) => {
-      if (typeof target !== 'string' || !AGENTS.includes(target as AgentKind))
+      if (typeof target !== 'string' || !AGENTS.some(agent => agent === target))
         fail(`${label}.targets contains an unsupported Harness`);
       return target as AgentKind;
     });

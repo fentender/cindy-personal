@@ -19,7 +19,7 @@ const log = createLogger('maker-ipc:authHandlers');
 export type MakerIpcBroadcast = (channel: string, payload: unknown) => void;
 
 /** IPC 允许的 agent 种类；运行时枚举校验不能靠 TypeScript 强转替代。 */
-const AGENT_KINDS = ['claude-code', 'codex', 'pi'] as const satisfies readonly AgentKind[];
+const AGENT_KINDS = ['claude-code', 'codex', 'pi', 'antigravity'] as const satisfies readonly AgentKind[];
 const AGENT_LOGIN_MODES = ['browser', 'device-code', 'local'] as const satisfies readonly AgentLoginMode[];
 const MAX_LOGIN_PROGRESS_CHARS = 16_384;
 const LOGIN_OWNER_ID_PATTERN = /^[A-Za-z0-9._:-]{1,128}$/;
@@ -353,7 +353,7 @@ export function registerMakerAuthHandlers(
       // 唯一的取消收口边界。否则旧 handler 可能在这次清理之后迟到写回缓存或成功广播。
       await operation.settled;
       if (!isCurrent()) return;
-      if (kind === 'codex') {
+      if (kind === 'codex' || kind === 'antigravity') {
         if (operation.requiresDurableDisconnect) {
           try {
             // Cancel 可能落在 adapter 已返回成功、handler 正刷新模型的窗口；此时 adapter 的
@@ -382,7 +382,7 @@ export function registerMakerAuthHandlers(
           }
         }
         if (!isCurrent()) return;
-        await onCodexAuthChange?.(false, false, isCurrent);
+        if (kind === 'codex') await onCodexAuthChange?.(false, false, isCurrent);
       }
       if (!isCurrent()) return;
       broadcast(MAKER_PUSH.AUTH_STATE_CHANGED, {
@@ -486,8 +486,8 @@ export function registerMakerAuthHandlers(
     const kind = requireAgentKind(agentKind);
     const { releaseOwner, ownerId } = requireCancelOptions(rawOptions);
     if (releaseOwner) {
-      if (kind !== 'codex') {
-        throwIpcError('INVALID_PARAMS', 'owner release is only supported by codex');
+      if (kind !== 'codex' && kind !== 'antigravity') {
+        throwIpcError('INVALID_PARAMS', 'owner release is only supported by codex and antigravity');
       }
       const sender = readController(event);
       if (!sender) throwIpcError('INVALID_PARAMS', 'owner release requires an authenticated controller');
@@ -576,8 +576,8 @@ function requireLoginOptions(
     throwIpcError('INVALID_PARAMS', 'This login mode is only supported by codex');
   }
   const ownerId = requireLoginOwnerId(options.ownerId);
-  if (agentKind !== 'codex' && ownerId) {
-    throwIpcError('INVALID_PARAMS', 'ownerId is only supported by codex');
+  if (agentKind !== 'codex' && agentKind !== 'antigravity' && ownerId) {
+    throwIpcError('INVALID_PARAMS', 'ownerId is only supported by codex and antigravity');
   }
   return { mode, ownerId };
 }

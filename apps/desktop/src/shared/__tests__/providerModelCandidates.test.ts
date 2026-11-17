@@ -13,6 +13,12 @@ function fixture() {
 }
 
 describe('supplemental preset candidates', () => {
+  it('does not offer HTTP preset models for the native ACP engine', () => {
+    const preset = BUNDLED_CATALOG.presets!.find(p => p.id === 'openhubs')!;
+    const model = { id: 'native-model', name: 'Native' };
+    expect(presetModelCandidate(preset, 'antigravity', model, undefined, presetCandidateRoute(preset, 'pi')))
+      .toBeUndefined();
+  });
   it('accepts newly discovered OpenHubs models through the connection default without a model whitelist', () => {
     const preset = BUNDLED_CATALOG.presets!.find(p => p.id === 'openhubs')!;
     const route = presetCandidateRoute(preset, 'pi');

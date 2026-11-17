@@ -4,8 +4,8 @@ import { parseGhostContextBlocks, parseGhostMemoryEntries, parseGhostSystemPromp
 // Protocol, unit: these parsers receive untrusted plugin replies. Unlike model
 // routing tests, they must bound inline material and discard forged origins.
 describe('runtime provider replies', () => {
-  it('requires static task-scoped prompt fragments with unique identities and explicit order', () => {
-    const fragment = { id: 'style', text: '{{literal}}', order: 10, scope: 'selected-task', agentKinds: ['pi'] };
+  it.each(['pi', 'antigravity'])('requires static %s task-scoped prompt fragments with unique identities and explicit order', (agentKind) => {
+    const fragment = { id: 'style', text: '{{literal}}', order: 10, scope: 'selected-task', agentKinds: [agentKind] };
     expect(parseGhostSystemPromptFragments([fragment])).toEqual([fragment]);
     for (const value of [[{ ...fragment, scope: 'all-tasks' }], [{ ...fragment, text: () => 'dynamic' }],
       [{ ...fragment, order: 0.5 }], [fragment, fragment]]) expect(parseGhostSystemPromptFragments(value)).toBeUndefined();

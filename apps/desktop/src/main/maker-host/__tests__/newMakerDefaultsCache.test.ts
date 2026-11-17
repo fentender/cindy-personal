@@ -23,6 +23,26 @@ function seed(snapshot: NewMakerDraftSnapshot): void {
 }
 
 describe('getRemoteNewMakerDefaults (device-link 远程草稿镜像)', () => {
+  it('keeps native Antigravity defaults separate from Codex in worker and remote drafts', () => {
+    const route = { harness: 'antigravity' as const, model: 'gemini-4-argon', providerId: 'antigravity', effort: 'medium', fastMode: false };
+    const owner = { dataOwnerId: 'native-owner', ownerGeneration: 1 };
+    expect(syncNewMakerDraftCache({
+      ownerStamp: owner,
+      selectedRoute: route,
+      lastByVendor: {
+        antigravity: { model: route.model, providerId: route.providerId, effort: route.effort, permissionMode: 'auto' },
+        codex: { model: 'gpt-5.4', providerId: 'openai', effort: 'high' },
+      },
+      effortByModel: {},
+      fastModeByModel: {},
+    }, owner, 'native-owner:1', false)).toBe(true);
+
+    expect(getSelectedNewMakerRoute('native-owner:1')).toEqual(route);
+    expect(getWorkerDefaultsFromNewMaker('antigravity')).toEqual({ model: route.model, providerId: route.providerId, effort: route.effort, fastMode: false });
+    expect(getRemoteNewMakerDefaults('antigravity')).toMatchObject({ model: route.model, providerId: route.providerId, selectedAgentKind: 'antigravity', permissionMode: 'auto' });
+    expect(getRemoteNewMakerDefaultsByVendor()).toHaveProperty('antigravity', getRemoteNewMakerDefaults('antigravity'));
+  });
+
   beforeEach(() => {
     seed({
       lastByVendor: {
@@ -119,7 +139,7 @@ describe('getRemoteNewMakerDefaults (device-link 远程草稿镜像)', () => {
     });
   });
 
-  it('草稿变更广播快照始终包含 claude-code、codex、pi 三个槽', () => {
+  it('草稿变更广播快照包含所有引擎的槽位', () => {
     seed({
       lastByVendor: { pi: { model: 'claude-sonnet-4-6' } },
       modelChosenByVendor: { pi: false },
@@ -128,7 +148,7 @@ describe('getRemoteNewMakerDefaults (device-link 远程草稿镜像)', () => {
     });
 
     const snapshot = getRemoteNewMakerDefaultsByVendor();
-    expect(Object.keys(snapshot)).toEqual(['claudeCode', 'codex', 'pi']);
+    expect(Object.keys(snapshot)).toEqual(['claudeCode', 'codex', 'pi', 'antigravity']);
     expect(snapshot.pi).toMatchObject({
       model: 'claude-sonnet-4-6',
       modelChosenByUser: false,

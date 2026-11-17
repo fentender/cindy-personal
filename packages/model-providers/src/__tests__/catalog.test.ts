@@ -55,6 +55,28 @@ function provider(id: string) {
   return p;
 }
 
+// 原生 ACP 的型号来自 CLI；目录往返不能把它拒绝，也不能虚构 HTTP 上游或窗口。
+it('preserves the native Antigravity subscription and its unknown context window', () => {
+  const native = provider('antigravity');
+  expect(native).toMatchObject({
+    agents: ['antigravity'], auth: { method: 'oauth' }, access: { kind: 'subscription' },
+    routing: { antigravity: { authStrategy: 'oauth-passthrough' } },
+    models: { antigravity: [] },
+  });
+  expect(native.routing.antigravity?.upstream).toBeUndefined();
+  const discovered = { ...native, models: { antigravity: [model('gemini-4-argon', {
+    contextWindow: 0, contextWindowVerified: false,
+  })] } };
+  const parsed = parseCatalog({ version: 'test', providers: [discovered] });
+  expect(parsed.providers[0].models.antigravity?.[0]).toMatchObject({
+    id: 'gemini-4-argon', contextWindow: 0, contextWindowVerified: false,
+  });
+  expect(() => parseCatalog({ version: 'test', providers: [{ ...discovered,
+    agents: ['pi'], routing: { pi: { authStrategy: 'none' } },
+    models: { pi: discovered.models.antigravity },
+  }] })).toThrow(/contextWindow/);
+});
+
 function registryEntryForRoute(providerId: string, modelId: string) {
   const registry = BUNDLED_CATALOG.modelRegistry;
   if (!registry) throw new Error("missing bundled modelRegistry");
@@ -171,6 +193,7 @@ describe("bundled catalog validity (dynamic-first contract)", () => {
       "xai",
       "xd",
       "gemini",
+      "antigravity",
     ]);
     expect(BUNDLED_CATALOG.providers.every((p) => p.source === "builtin")).toBe(
       true,

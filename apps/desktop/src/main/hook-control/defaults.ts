@@ -37,25 +37,25 @@ import type { Effort } from '@cindy/maker-core';
 /** 依赖注入面: IM 默认值 + 各 agent 当前可用模型清单。 */
 export interface HookDefaultsDeps {
   readDefaults: () => {
-    agentKind: 'claude-code' | 'codex' | 'pi';
+    agentKind: 'claude-code' | 'codex' | 'pi' | 'antigravity';
     agents: Record<
-      'claude-code' | 'codex' | 'pi',
+      'claude-code' | 'codex' | 'pi' | 'antigravity',
       { providerId: string | null; model: string; effort: string }
     >;
   };
-  getModels: (agentKind: 'claude-code' | 'codex' | 'pi') => Array<{
+  getModels: (agentKind: 'claude-code' | 'codex' | 'pi' | 'antigravity') => Array<{
     id: string;
     efforts: readonly string[];
     defaultEffort: string | null;
   }>;
   /** 该 agent 支持的权限档 id 清单(capabilities.permissionModes)。 */
-  getPermissionModes: (agentKind: 'claude-code' | 'codex' | 'pi') => readonly string[];
+  getPermissionModes: (agentKind: 'claude-code' | 'codex' | 'pi' | 'antigravity') => readonly string[];
   log: { warn(msg: string): void };
 }
 
 export interface ResolvedHookSessionConfig {
   agentDeviceId?: string | null;
-  agentKind: 'claude-code' | 'codex' | 'pi';
+  agentKind: 'claude-code' | 'codex' | 'pi' | 'antigravity';
   model: string;
   effort: Effort | undefined;
   permissionMode: string;
@@ -85,9 +85,9 @@ export function resolveHookSessionConfig(
   const defaults = deps.readDefaults();
 
   // 1. agent: 显式合法值 > 草稿默认
-  const agentKind: 'claude-code' | 'codex' | 'pi' =
+  const agentKind: 'claude-code' | 'codex' | 'pi' | 'antigravity' =
     overrides.agentKind !== null && AGENT_KINDS.has(overrides.agentKind)
-      ? (overrides.agentKind as 'claude-code' | 'codex' | 'pi')
+      ? (overrides.agentKind as 'claude-code' | 'codex' | 'pi' | 'antigravity')
       : defaults.agentKind;
 
   const models = deps.getModels(agentKind);

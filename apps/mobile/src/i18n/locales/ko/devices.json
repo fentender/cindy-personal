@@ -394,7 +394,9 @@
         "all": "전체",
         "cc": "Claude Code",
         "codex": "Codex",
-        "pi": "Pi"
+        "pi": "Pi",
+
+        "antigravity": "Antigravity"
       },
       "filterLastActivityHeading": "최근 활동",
       "filterLastActivity": {
@@ -453,7 +455,9 @@
           "all": "전체",
           "cc": "Claude Code",
           "codex": "Codex",
-          "pi": "Pi"
+          "pi": "Pi",
+
+          "antigravity": "Antigravity"
         },
         "lastActivity": {
           "1d": "1일",

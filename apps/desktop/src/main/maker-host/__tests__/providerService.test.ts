@@ -12,6 +12,23 @@ import type { XdOrgIdentity } from '../../../shared/xdOrg.js';
 const bundledCatalog = () => BUNDLED_CATALOG;
 
 describe('createProviderService', () => {
+  // 原生 CLI 授权会变化，供应商列表须采用宿主的当前回执，不能依赖静态身份卡。
+  it('projects native Antigravity connection receipts and defaults unavailable hosts to disconnected', async () => {
+    let connected = true;
+    const reader = vi.fn(() => connected);
+    const connection = { xd: () => false, anthropic: () => false, openai: () => false,
+      xai: () => false, antigravity: reader };
+    const svc = createProviderService({ getCatalog: bundledCatalog, connection });
+    expect((await svc.listProviders({ allowSideEffects: true })).find(p => p.id === 'antigravity'))
+      .toMatchObject({ connected: true, agents: ['antigravity'] });
+    expect(reader).toHaveBeenLastCalledWith(expect.objectContaining({ allowSideEffects: true }));
+    connected = false;
+    expect((await svc.listProviders({ snapshotOnly: true })).find(p => p.id === 'antigravity')?.connected).toBe(false);
+    expect(reader).toHaveBeenLastCalledWith(expect.objectContaining({ allowSideEffects: false, snapshotOnly: true }));
+    const { antigravity: _reader, ...withoutNative } = connection;
+    const otherHost = createProviderService({ getCatalog: bundledCatalog, connection: withoutNative });
+    expect((await otherHost.listProviders()).find(p => p.id === 'antigravity')?.connected).toBe(false);
+  });
   // Unit, #10223: successful catalog transport does not mean every native read
   // succeeded. Model discovery can fail with authentication still connected;
   // explicit failure evidence, rather than connection state, drives recovery.
@@ -250,7 +267,7 @@ describe('createProviderService', () => {
     const providers = await svc.listProviders();
     const byId = Object.fromEntries(providers.map((p) => [p.id, p.connected]));
     // gemini(内置 API-key 供应商)未注入 builtinApiKeyConnected ⇒ 缺省未连接。
-    expect(byId).toEqual({ anthropic: false, openai: false, xai: false, xd: true, gemini: false });
+    expect(byId).toEqual({ anthropic: false, openai: false, xai: false, xd: true, gemini: false, antigravity: false });
   });
 
   it('builtin API-key provider connection follows builtinApiKeyConnected (2026-07 图像多来源)', async () => {

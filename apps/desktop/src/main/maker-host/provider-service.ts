@@ -65,7 +65,7 @@ export interface ProviderListOptions extends ConnectionReadOptions {
   getCatalog?: () => Catalog;
 }
 
-/** 内置三家供应商「是否已连接」的判定器（由 host 注入，读各自凭证存储）。 */
+/** 内置供应商连接态由宿主各自的原生授权流程判定。 */
 export interface ProviderConnectionReaders {
   /** XD 网关：托管 api_key 是否存在。 */
   xd: (opts: ConnectionReadOptions) => boolean | Promise<boolean>;
@@ -75,6 +75,8 @@ export interface ProviderConnectionReaders {
   openai: (opts: ConnectionReadOptions) => boolean | Promise<boolean>;
   /** xAI：SuperGrok OAuth 是否登录(responses-bridge 直连 api.x.ai)。 */
   xai: (opts: ConnectionReadOptions) => boolean | Promise<boolean>;
+  /** 未安装原生 CLI 的宿主不提供此入口，显示为未连接。 */
+  antigravity?: (opts: ConnectionReadOptions) => boolean | Promise<boolean>;
 }
 
 export interface ProviderServiceDeps {
@@ -162,15 +164,16 @@ export function createProviderService(deps: ProviderServiceDeps): ProviderServic
       waitForDiscovery: opts?.waitForDiscovery === true,
       ...(opts?.getCatalog || opts?.catalog ? { includeBoundAccounts: true } : {}),
     };
-    const [xd, anthropic, openai, xai] = await Promise.all([
+    const [xd, anthropic, openai, xai, antigravity] = await Promise.all([
       Promise.resolve(deps.connection.xd(readOpts)),
       Promise.resolve(deps.connection.anthropic(readOpts)),
       Promise.resolve(deps.connection.openai(readOpts)),
       Promise.resolve(deps.connection.xai(readOpts)),
+      Promise.resolve(deps.connection.antigravity?.(readOpts) ?? false),
     ]);
     const sourceCatalog = opts?.getCatalog?.() ?? opts?.catalog ?? deps.getCatalog();
     const catalog = deps.projectCatalog?.(sourceCatalog, !!(opts?.getCatalog || opts?.catalog)) ?? sourceCatalog;
-    const connected: ConnectionState = { xd, anthropic, openai, xai };
+    const connected: ConnectionState = { xd, anthropic, openai, xai, antigravity };
     for (const p of catalog.providers) {
       // 无鉴权供应商无需任何登录或密钥：只要目录声明有效，就可立即参与模型选择。
       // 该规则与 source 无关，覆盖远端目录下发的 built-in/self-hosted 条目。

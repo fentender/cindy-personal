@@ -518,11 +518,12 @@ function buildCindyUpdater(): void {
 }
 
 /**
- * 在 Windows SDK 安装目录里找 mt.exe (manifest tool)。优先用最新版 SDK 的
- * x64 版本; 找不到时给清晰的错(让构建机至少装一次 Win10 SDK)。
+ * 在 Windows SDK 安装目录里找 mt.exe (manifest tool)。优先使用构建环境指定的
+ * SDK，再查默认安装位置；每个位置优先用最新版 SDK 的 x64 版本。
  */
 function findMtExe(): string {
   const candidates = [
+    ...(process.env.WindowsSdkDir ? [path.join(process.env.WindowsSdkDir, 'bin')] : []),
     'C:\\Program Files (x86)\\Windows Kits\\10\\bin',
     'C:\\Program Files\\Windows Kits\\10\\bin',
   ];
@@ -543,7 +544,7 @@ function findMtExe(): string {
     if (fs.existsSync(flat)) return flat;
   }
   throw new Error(
-    '[forge] mt.exe not found. Install Windows 10/11 SDK and ensure ' +
+    '[forge] mt.exe not found. Set WindowsSdkDir to the installed Windows SDK root, or ensure ' +
       '"C:\\Program Files (x86)\\Windows Kits\\10\\bin\\<ver>\\x64\\mt.exe" exists.',
   );
 }

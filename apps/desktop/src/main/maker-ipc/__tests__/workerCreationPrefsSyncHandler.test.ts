@@ -41,10 +41,10 @@ describe('worker creation prefs sync IPC boundary', () => {
 
 // Unit: trusted IPC must mirror only the active owner's route, after sender admission.
 // Previous tests covered permission only; stale owner stamps must not change model routing.
-it('fences route snapshots by sender and active owner generation', () => {
+it.each(['pi', 'antigravity'])('fences %s route snapshots by sender and active owner generation', agent => {
   const setSelection = vi.fn();
   const owner = { dataOwnerId: 'owner', ownerGeneration: 2 };
-  const route = { agent: 'pi', model: 'test-model', effort: 'high', fast: false, providerId: 'test', agentDeviceId: null };
+  const route = { agent, model: 'test-model', effort: 'high', fast: false, providerId: 'test', agentDeviceId: null };
   let trusted = true;
   const handler = createWorkerCreationPrefsSyncHandler({
     assertTrustedSender: () => { if (!trusted) throw new Error('untrusted'); },

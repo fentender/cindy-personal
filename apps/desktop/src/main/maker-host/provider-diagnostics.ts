@@ -459,6 +459,7 @@ export async function resolveSavedProbeSpec(providerId: string, agent: AgentKind
     throw new Error(`provider '${providerId}' is not a custom provider`);
   const routing = provider.routing[agent];
   if (!routing) throw new Error(`provider '${providerId}' has no runtime for '${agent}'`);
+  if (routing.transport === 'acp') throw new Error('原生 Antigravity 连接由 CLI 授权状态确认，不支持 HTTP 探测');
   if (routing.disabled) throw new Error(`provider '${providerId}' runtime '${agent}' is disabled`);
   // 探测发的是聊天形状的最小请求(见下方 requestPath/body 组装);挑第一个非聊天模型
   // (image/embedding/...)会把探测发给一个本来就不接受聊天请求的端点,得到的失败结论

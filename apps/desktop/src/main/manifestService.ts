@@ -25,6 +25,7 @@ import { getClientEndpoint } from './clientEndpointsService';
 import { isBetaChannelEnabled } from './updateChannelStore';
 import { compareAppUpdateVersions, parseAppUpdateVersion } from './updateVersionPolicy';
 import { isRunningUnderArm64Translation } from './arm64Translation';
+import { getPersonalReleaseSource } from './personalRelease';
 
 const log = createLogger('manifestService');
 
@@ -193,6 +194,15 @@ export async function fetchAppUpdateManifest(
   timeoutMs?: number,
   signal?: AbortSignal,
 ): Promise<Manifest | null> {
+  const personal = getPersonalReleaseSource();
+  if (personal) {
+    // 引擎缓存继续订阅官方清单；个人应用清单不发布到这个缓存，也不回退到官方应用。
+    const [, manifest] = await Promise.all([
+      fetchManifest(timeoutMs, signal),
+      requestManifest(getPlatformKey(), false, timeoutMs, signal, personal.manifestBaseUrl),
+    ]);
+    return manifest;
+  }
   const channel = currentUpdateChannel();
   const epochAtStart = manifestEpoch;
   const manifest = await fetchManifest(timeoutMs, signal);
@@ -228,14 +238,15 @@ async function requestManifest(
   publish: boolean,
   timeoutMs?: number,
   signal?: AbortSignal,
+  applicationReleaseBaseUrl?: string,
 ): Promise<Manifest | null> {
   if (isDev()) return null;
   if (signal?.aborted) return null;
 
   const channel = currentUpdateChannel();
-  const channelSuffix = channel === 'release' ? '' : `-${channel}`;
+  const channelSuffix = applicationReleaseBaseUrl || channel === 'release' ? '' : `-${channel}`;
   // Cache-bust: append timestamp to prevent Chromium / CDN serving stale manifest
-  const url = `${getBaseUrl()}/manifest-${platformKey}${channelSuffix}.json?t=${Date.now()}`;
+  const url = `${applicationReleaseBaseUrl ?? getBaseUrl()}/manifest-${platformKey}${channelSuffix}.json?t=${Date.now()}`;
   // 快照发起时的代际:响应完成写 cached 前核对,期间切渠道则作废本次结果。
   const epochAtStart = manifestEpoch;
   log.info('Fetching (%s channel): %s', channel, url);

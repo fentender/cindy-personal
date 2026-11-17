@@ -121,7 +121,7 @@ export async function fetchSavedOAuthProviderModels(
 ): Promise<ProviderModelsFetchResult> {
   const oauth = provider?.auth.oauth;
   const route = provider?.routing[agent];
-  if (provider?.source !== 'user' || provider.auth.method !== 'oauth' || !oauth || !route || route.disabled || !isCurrent()) {
+  if (provider?.source !== 'user' || provider.auth.method !== 'oauth' || !oauth || !route || route.transport === 'acp' || route.disabled || !isCurrent()) {
     return { ok: false, code: 'AUTH_INVALID' };
   }
   let token: string | null;

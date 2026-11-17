@@ -35,7 +35,7 @@ function skillPackageRelPath(root: string, child: string, fallback: string): str
 }
 
 function normalizeScope(engine: string, rawScope: string): SkillScope {
-  if (engine === 'codex' || engine === 'pi') {
+  if (engine === 'codex' || engine === 'pi' || engine === 'antigravity') {
     return rawScope === 'repo' ? 'project' : 'global';
   }
   return rawScope === 'project' ? 'project' : 'global';
@@ -140,7 +140,7 @@ export function buildSkillList(input: SkillListProjectionInput): ScanResult {
     if (!engines.has(item.engine)) {
       engines.set(item.engine, {
         engine: item.engine,
-        label: item.engine === 'claude-code' ? 'Claude' : item.engine === 'codex' ? 'Codex' : 'Pi',
+        label: item.engine === 'claude-code' ? 'Claude' : item.engine === 'codex' ? 'Codex' : item.engine === 'antigravity' ? 'Antigravity' : 'Pi',
         ...(item.runtimeStatus ? { runtimeStatus: item.runtimeStatus } : {}),
       });
     }
@@ -239,7 +239,7 @@ export function buildSkillList(input: SkillListProjectionInput): ScanResult {
       if (!engineSet.has(eng)) {
         engineSet.set(eng, {
           engine: eng,
-          label: eng === 'claude-code' ? 'Claude' : eng === 'codex' ? 'Codex' : 'Pi',
+          label: eng === 'claude-code' ? 'Claude' : eng === 'codex' ? 'Codex' : eng === 'antigravity' ? 'Antigravity' : 'Pi',
           ...(item.runtimeStatus ? { runtimeStatus: item.runtimeStatus } : {}),
         });
       }

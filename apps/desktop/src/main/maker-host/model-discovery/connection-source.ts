@@ -9,13 +9,14 @@
 export type ConnectionSourceKind =
   'native-harness-inherited' | 'explicit-provider-oauth' | 'explicit-api-key';
 
-export type NativeProviderId = 'anthropic' | 'openai' | 'xai';
-export type NativeHarnessInheritedProviderId = 'anthropic' | 'openai';
+export type NativeProviderId = 'anthropic' | 'openai' | 'xai' | 'antigravity';
+export type NativeHarnessInheritedProviderId = 'anthropic' | 'openai' | 'antigravity';
 
 export const NATIVE_PROVIDER_CONNECTION_SOURCE = {
   anthropic: 'native-harness-inherited',
   openai: 'native-harness-inherited',
   xai: 'explicit-provider-oauth',
+  antigravity: 'native-harness-inherited',
 } as const satisfies Record<NativeProviderId, ConnectionSourceKind>;
 
 export function isNativeHarnessInheritedProvider(

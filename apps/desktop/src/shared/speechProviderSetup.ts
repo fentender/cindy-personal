@@ -175,7 +175,7 @@ export function withSpeechApiPresets(presets: ProviderPreset[]): ProviderPreset[
 
 export function providerSpeechSetup(
   provider: ProviderView,
-): { agent: AgentKind; service: SpeechService } | undefined {
+): { agent: Exclude<AgentKind, 'antigravity'>; service: SpeechService } | undefined {
   if (provider.source !== 'user' || provider.suspended || provider.auth.method !== 'apiKey') return;
   for (const agent of ['codex', 'pi', 'claude-code'] as const) {
     const route = provider.routing[agent];

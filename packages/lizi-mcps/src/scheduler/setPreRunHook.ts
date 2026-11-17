@@ -89,7 +89,7 @@ export function registerScheduleSetPreRunHookTool(
         let currentCommand: string | undefined;
         let currentTimeoutMs: number | undefined;
         let providerId: string | undefined;
-        let agentKind: 'codex' | 'claude-code' | 'pi' | undefined;
+        let agentKind: Parameters<NonNullable<SchedulerMcpDeps['hookScript']>['install']>[0]['agentKind'];
         let model: string | undefined;
         if (scheduleId) {
           const schedule = await scheduler.get(scheduleId);

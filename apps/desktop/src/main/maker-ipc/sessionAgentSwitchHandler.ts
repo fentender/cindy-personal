@@ -120,6 +120,7 @@ export function toMakerAgentKind(dbKind: string): AgentKind {
 export function agentEngineLabel(dbKind: DbAgentKind): string {
   if (dbKind === 'codex') return 'Codex';
   if (dbKind === 'pi') return 'Pi';
+  if (dbKind === 'antigravity') return 'Antigravity';
   return 'Claude Code';
 }
 
@@ -190,6 +191,7 @@ export interface AgentSwitchSessionRow {
   sdkSessionId: string | null;
   workingDir?: string | null;
   source?: string | null;
+  permissionMode?: string | null;
   /** Agent 在哪台电脑运行(null / 缺省 = 任务所在电脑)。 */
   agentDeviceId?: string | null;
 }
@@ -198,6 +200,8 @@ export interface AgentSwitchSessionRow {
 const AGENT_DEVICE_ID_PATTERN = /^[A-Za-z0-9_.:-]{1,128}$/;
 
 export interface MakerSessionAgentSwitchHandlerDeps {
+  /** 目标引擎声明的权限档位；在关闭来源与提交交接前核对。 */
+  getAgentPermissionModes(agentKind: AgentKind): readonly string[];
   /**
    * 任务要换到供应商组那一项(组所在电脑上那个建了组的供应商)时，由组按它的状态选一台能用的电脑
    * (docs/product-rules/provider-groups.md §6)：返回选中那台的位置；不是组那一项或组读不到返回 null(照用户选的位置)；
@@ -206,7 +210,7 @@ export interface MakerSessionAgentSwitchHandlerDeps {
   resolveProviderGroupTarget?(
     sessionId: string,
     target: {
-      agentKind: 'claude-code' | 'codex' | 'pi';
+      agentKind: 'claude-code' | 'codex' | 'pi' | 'antigravity';
       model: string;
       providerId: string | null;
       /** 用户选的位置(null = 任务所在电脑)。 */
@@ -243,7 +247,7 @@ export interface MakerSessionAgentSwitchHandlerDeps {
    * (测试最小 harness)。
    */
   assertModelRouteUsable?(
-    agent: 'claude-code' | 'codex' | 'pi',
+    agent: 'claude-code' | 'codex' | 'pi' | 'antigravity',
     model: string,
     providerId: string | null,
     /** 被切换的任务；Agent 在另一台电脑运行的任务按那台的目录裁决(本机不校验)。 */
@@ -257,7 +261,7 @@ export interface MakerSessionAgentSwitchHandlerDeps {
    */
   assertAgentDeviceRouteUsable?(
     deviceId: string,
-    agent: 'claude-code' | 'codex' | 'pi',
+    agent: 'claude-code' | 'codex' | 'pi' | 'antigravity',
     model: string,
     providerId: string | null,
   ): Promise<void>;
@@ -269,7 +273,7 @@ export interface MakerSessionAgentSwitchHandlerDeps {
   readOwnerGeneration?(): number;
   confirmNativeHistoryFallback?(sessionId: string, targetDeviceId: string | null): Promise<boolean>;
   relocateNativeHistory?(input: {
-    sessionId: string; kind: 'claude-code' | 'codex' | 'pi'; nativeId: string; workingDir: string;
+    sessionId: string; kind: 'claude-code' | 'codex' | 'pi' | 'antigravity'; nativeId: string; workingDir: string;
     fromDevice: string | null; toDevice: string | null; assertCurrent(): void;
   }): Promise<string | null>;
   closeSession(sessionId: string): Promise<void>;
@@ -758,8 +762,8 @@ export async function performSessionAgentSwitch(
   if (typeof sessionId !== 'string' || sessionId.length === 0) {
     throwIpcError('INVALID_PARAMS', 'sessionId required');
   }
-  if (targetAgentKind !== 'claude-code' && targetAgentKind !== 'codex' && targetAgentKind !== 'pi') {
-    throwIpcError('INVALID_PARAMS', 'targetAgentKind must be claude-code | codex | pi');
+  if (targetAgentKind !== 'claude-code' && targetAgentKind !== 'codex' && targetAgentKind !== 'pi' && targetAgentKind !== 'antigravity') {
+    throwIpcError('INVALID_PARAMS', 'targetAgentKind must be claude-code | codex | pi | antigravity');
   }
   if (typeof model !== 'string' || model.length === 0) {
     throwIpcError('INVALID_PARAMS', 'model required');
@@ -811,6 +815,13 @@ export async function performSessionAgentSwitch(
   if (row.remoteHostId) {
     // SSH can run all three Harnesses, but cannot hand off an existing task between them.
     throwIpcError('SSH_HARNESS_SWITCH_UNSUPPORTED', 'agent switch is not supported for remote sessions');
+  }
+  if (targetAgentKind === 'antigravity') {
+    const permissionMode = row.permissionMode === 'default' ? 'ask' : row.permissionMode ?? 'ask';
+    const supportedModes = deps.getAgentPermissionModes(targetAgentKind);
+    if (!supportedModes.includes(permissionMode)) {
+      throwIpcError('UNSUPPORTED_CAPABILITY', `Antigravity does not support permission mode ${permissionMode}; choose ${supportedModes.join(', ')} before switching.`);
+    }
   }
   // Orca Lead / Worker tasks live on this computer, so moving their Agent works like
   // a normal task (2026-10-16). An execution-device Worker's task also lives on this

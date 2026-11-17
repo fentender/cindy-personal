@@ -31,6 +31,15 @@ beforeEach(() => {
 });
 
 describe('Java runtime environment for Gradle', () => {
+  it.skipIf(process.platform !== 'win32')('preserves Windows Path casing and system tools when selecting the Studio JDK', () => {
+    versions.set('java', 11);
+    versions.set(javaBin(studioHome), 21);
+    const baseEnv = { NODE_ENV: 'test' as const, Path: 'C:\\Windows\\System32', ANDROID_STUDIO_JDK: studioHome };
+    const result = resolveJavaRuntimeEnv(baseEnv);
+    expect(result.Path).toBe([join(studioHome, 'bin'), baseEnv.Path].join(delimiter));
+    expect(result).not.toHaveProperty('PATH');
+  });
+
   it.each([undefined, 11])('discards unusable JAVA_HOME (version %s) when PATH has Java 17', (major) => {
     versions.set('java', 17);
     if (major) versions.set(javaBin(configuredHome), major);

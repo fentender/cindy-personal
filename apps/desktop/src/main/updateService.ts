@@ -25,6 +25,8 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { spawn } from 'node:child_process';
 import { isCindyPersonalRuntime } from './cindy-make/versionRuntimeIdentity.js';
+import { getPersonalReleaseSource } from './personalRelease';
+import { personalReleaseAssetUrl } from '@cindy/maker-shared/personal-release';
 import os from 'node:os';
 
 import {
@@ -253,7 +255,7 @@ let busyProbe: () => boolean | Promise<boolean> = () => false;
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 function getUpdatesDir(): string {
-  const dir = path.join(app.getPath('userData'), 'updates');
+  const dir = path.join(app.getPath('userData'), getPersonalReleaseSource()?.cacheDirectory ?? 'updates');
   fs.mkdirSync(dir, { recursive: true });
   return dir;
 }
@@ -1272,7 +1274,8 @@ async function doCheckForUpdate(manifestOverride?: Manifest | null): Promise<Che
 
   log.info('Update available: %s → %s (wasReady=%s)', currentVersion, latestVersion, wasReady);
 
-  const downloadUrl = `${getBaseUrl()}/${asset.file}`;
+  const personal = getPersonalReleaseSource();
+  const downloadUrl = personal ? personalReleaseAssetUrl(personal, asset.file) : `${getBaseUrl()}/${asset.file}`;
   const fileName = path.basename(asset.file);
   const destPath = path.join(getUpdatesDir(), fileName);
 

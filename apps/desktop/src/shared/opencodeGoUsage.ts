@@ -35,7 +35,7 @@ export function isOpenCodeGoProvider(
   if (!provider || provider.auth?.method !== 'apiKey') return false;
   const routes = agent ? [provider.routing?.[agent]] : Object.values(provider.routing ?? {});
   return routes.some(
-    (route) => route && !route.disabled && opencodeGoUsageEndpoint(route.upstream) !== null,
+    (route) => route && route.transport !== 'acp' && !route.disabled && opencodeGoUsageEndpoint(route.upstream) !== null,
   );
 }
 

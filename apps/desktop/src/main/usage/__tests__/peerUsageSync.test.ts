@@ -113,8 +113,9 @@ describe('usage device rows wire format', () => {
     expect(decoded.rows.modelRows[0]).toMatchObject({ agentKind: 'media', money: usd(1), inputTokens: 0 });
   });
 
-  it('round-trips rows, filters by sinceDay and validates requests', async () => {
+  it.each(['codex', 'antigravity'] as const)('round-trips %s rows, filters by sinceDay and validates requests', async (agentKind) => {
     const rows = rowsFor(['2026-09-24', '2026-09-25', '2026-09-26']);
+    rows.modelRows.forEach((row) => { row.agentKind = agentKind; });
     const decoded = await decodeUsageDeviceRowsResponse(
       await hostResponse(rows, '2026-09-26', '2026-09-25'),
     );
@@ -122,6 +123,7 @@ describe('usage device rows wire format', () => {
     if (decoded?.kind !== 'rows') throw new Error('expected rows');
     expect(decoded.rows.spendDays.map((row) => row.day)).toEqual(['2026-09-25', '2026-09-26']);
     expect(decoded.rows.modelRows.map((row) => row.day)).toEqual(['2026-09-25', '2026-09-26']);
+    expect(decoded.rows.modelRows.map((row) => row.agentKind)).toEqual([agentKind, agentKind]);
 
     expect(parseUsageDeviceRowsRequest(undefined)).toEqual({ sinceDay: null });
     expect(parseUsageDeviceRowsRequest({ sinceDay: '2026-09-25' })).toEqual({

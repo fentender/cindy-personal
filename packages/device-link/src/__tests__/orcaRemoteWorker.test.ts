@@ -107,9 +107,9 @@ describe('parseOrcaRemoteWorkerOpenRequest', () => {
 });
 
 describe('execution host model discovery', () => {
-  it('preserves remote scopes and rejects malformed inputs before discovery', () => {
+  it.each(['pi', 'antigravity'])('preserves %s remote scopes and rejects malformed inputs before discovery', (agent) => {
     expect(parseOrcaRemoteWorkerModelsRequest({})).toEqual({});
-    expect(parseOrcaRemoteWorkerModelsRequest({ agent: 'pi', agentDeviceId: 'provider-pc' })).toEqual({ agent: 'pi', agentDeviceId: 'provider-pc' });
+    expect(parseOrcaRemoteWorkerModelsRequest({ agent, agentDeviceId: 'provider-pc' })).toEqual({ agent, agentDeviceId: 'provider-pc' });
     expect(() => parseOrcaRemoteWorkerModelsRequest({ agentDeviceId: 42 })).toThrow(/INVALID_PARAMS/);
     expect(() => parseOrcaRemoteWorkerModelsRequest({ agent: 'unknown' })).toThrow(/INVALID_PARAMS/);
   });

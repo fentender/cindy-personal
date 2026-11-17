@@ -823,7 +823,7 @@ interface ChatInputProps {
    * M35: Vendor lock — when provided, ModelSelector only shows models
    * belonging to this vendor ('cc' for Claude, 'codex' for OpenAI Codex).
    */
-  vendorKey?: 'cc' | 'codex' | 'pi';
+  vendorKey?: 'cc' | 'codex' | 'pi' | 'antigravity';
   /**
    * Optional override for the composerDraftStore key used to persist editor
    * content (and via attachmentState, attachments) across mount/unmount.
@@ -956,7 +956,7 @@ interface ChatInputProps {
    * `lastByVendor.model` 并原样进 createSession,写错就是首条请求路由到一个不存在的模型。
    */
   onUnifiedDraftSelect?: (selection: {
-    vendor: 'cc' | 'codex' | 'pi';
+    vendor: 'cc' | 'codex' | 'pi' | 'antigravity';
     providerId: string;
     /** 选中引擎的 **wire model id**。 */
     modelId: string;
@@ -1050,17 +1050,18 @@ function rememberCatalogModelPrefs(
 }
 
 /** 统一模型选择器联合列表的候选引擎全集(与 SELECTABLE_VENDORS 同一顺序)。 */
-const UNIFIED_AGENT_KINDS: readonly AgentKind[] = ['claude-code', 'codex', 'pi'];
+const UNIFIED_AGENT_KINDS: readonly AgentKind[] = ['claude-code', 'codex', 'pi', 'antigravity'];
 
 /** AgentKind → NewMaker vendor(useAvailableAgents 用 vendor 口径)。 */
-function agentKindToVendor(kind: AgentKind): 'cc' | 'codex' | 'pi' {
-  return kind === 'codex' ? 'codex' : kind === 'pi' ? 'pi' : 'cc';
+function agentKindToVendor(kind: AgentKind): 'cc' | 'codex' | 'pi' | 'antigravity' {
+  return kind === 'claude-code' ? 'cc' : kind;
 }
 
-function vendorKeyToAgentKind(v?: 'cc' | 'codex' | 'pi'): AgentKind | null {
+function vendorKeyToAgentKind(v?: 'cc' | 'codex' | 'pi' | 'antigravity'): AgentKind | null {
   if (v === 'cc') return 'claude-code';
   if (v === 'codex') return 'codex';
   if (v === 'pi') return 'pi';
+  if (v === 'antigravity') return 'antigravity';
   return null;
 }
 
@@ -2009,12 +2010,15 @@ export function ChatInput({
   const ccCaps = useAgentCapabilities('claude-code', catalogDeviceId);
   const codexCaps = useAgentCapabilities('codex', catalogDeviceId);
   const piCaps = useAgentCapabilities('pi', catalogDeviceId);
+  const antigravityCaps = useAgentCapabilities('antigravity', catalogDeviceId);
   const activeAgentCapabilities =
     agentKind === 'codex'
       ? codexCaps.capabilities
       : agentKind === 'pi'
         ? piCaps.capabilities
-        : ccCaps.capabilities;
+        : agentKind === 'antigravity'
+          ? antigravityCaps.capabilities
+          : ccCaps.capabilities;
 
   // session-agent-switch 入口门控。device-link 远程会话读**被控端**的值；除了基础
   // supportsSessionAgentSwitch，还必须有 v2 CAS 能力。同引擎 no-op 的安全收尾依赖 host
@@ -2154,8 +2158,11 @@ export function ChatInput({
     if ((piCaps.capabilities?.availableModels ?? []).some((m) => m.id === activeModel)) {
       return 'pi';
     }
+    if ((antigravityCaps.capabilities?.availableModels ?? []).some((m) => m.id === activeModel)) {
+      return 'antigravity';
+    }
     return null;
-  }, [activeModel, agentKind, runtimeEffective, composerSelection.pending, composerSelection.display.agentKind, ccCaps.capabilities, codexCaps.capabilities, piCaps.capabilities]);
+  }, [activeModel, agentKind, runtimeEffective, composerSelection.pending, composerSelection.display.agentKind, ccCaps.capabilities, codexCaps.capabilities, piCaps.capabilities, antigravityCaps.capabilities]);
   // 供应商连接态。effectiveSourceId / sendProviderId / dispatchSend 预检用它。device-link 远程会话 /
   // 草稿用**被控端**供应商目录(隧道),否则用本机(两 hook 都无条件调用,按 deviceLinkDeviceId 取)。
   // SSH 项目:Codex 只走远端主机的原生连接,模型清单读远端;Claude Code / Pi 仍用本机目录。
@@ -2234,6 +2241,7 @@ export function ChatInput({
     cc: ccCaps,
     codex: codexCaps,
     pi: piCaps,
+    antigravity: antigravityCaps,
     providers: remoteProviders,
   });
   const providersLoading = catalogDeviceId
@@ -6877,7 +6885,7 @@ export function ChatInput({
             ? [targetAgentKind]
             : currentModelAgentKind
               ? [currentModelAgentKind]
-              : ['claude-code', 'codex', 'pi'];
+              : ['claude-code', 'codex', 'pi', 'antigravity'];
           for (const kind of kinds) {
             const scoped = resolveProviderModelEfforts({
               providers,
@@ -6892,7 +6900,7 @@ export function ChatInput({
         // 能力缓存清单，避免把 pi 模型误判成空档位「固定档」。
         const m =
           getModelById(modelId, catalogDeviceId) ??
-          (['cc', 'codex', 'pi'] as const)
+          (['cc', 'codex', 'pi', 'antigravity'] as const)
             .flatMap((vendorKey) => getModelsForVendor(vendorKey, catalogDeviceId))
             .find((candidate) => candidate.id === modelId);
         return { efforts: m?.efforts ?? [], defaultEffort: m?.defaultEffort ?? null };
@@ -6901,7 +6909,7 @@ export function ChatInput({
         ? [targetAgentKind]
         : currentModelAgentKind
           ? [currentModelAgentKind]
-          : ['claude-code', 'codex', 'pi'];
+          : ['claude-code', 'codex', 'pi', 'antigravity'];
       if (providerId) {
         for (const kind of kinds) {
           const scoped = resolveProviderModelEfforts({
@@ -6943,7 +6951,9 @@ export function ChatInput({
             ? codexCaps.capabilities
             : currentModelAgentKind === 'pi'
               ? piCaps.capabilities
-              : ccCaps.capabilities,
+              : currentModelAgentKind === 'antigravity'
+                ? antigravityCaps.capabilities
+                : ccCaps.capabilities,
         providerId,
         modelId: targetModelId,
         agentKind: currentModelAgentKind,
@@ -6956,7 +6966,7 @@ export function ChatInput({
       currentModelAgentKind,
       ccCaps.capabilities,
       codexCaps.capabilities,
-      piCaps.capabilities,
+      piCaps.capabilities, antigravityCaps.capabilities,
     ],
   );
 
@@ -7339,7 +7349,7 @@ export function ChatInput({
       currentModelAgentKind,
       runtimeAgentKind,
       deviceLinkDeviceId,
-      piCaps.capabilities,
+      piCaps.capabilities, antigravityCaps.capabilities,
     ],
   );
 
@@ -7407,7 +7417,7 @@ export function ChatInput({
     ) => void | boolean | Promise<void | boolean>;
   }>({ byProvider: () => {}, byModel: () => {} });
   const confirmAgentBrowseSwitch = useCallback(
-    (targetAgent: 'claude-code' | 'codex' | 'pi' | null) =>
+    (targetAgent: 'claude-code' | 'codex' | 'pi' | 'antigravity' | null) =>
       confirmAgentSwitchRisk({
         // 不必再问的两种:回原引擎(same-engine no-op),或点的就是已经确认过的意图目标
         // Harness(只换模型,不换引擎)。换到第三家仍要问(Chris 2026-08-20:Claude 任务里
@@ -7431,7 +7441,7 @@ export function ChatInput({
   );
   const performAgentSwitch = useCallback(
     async (
-      targetAgentKind: 'claude-code' | 'codex' | 'pi',
+      targetAgentKind: 'claude-code' | 'codex' | 'pi' | 'antigravity',
       newModelId: string,
       providerId: string | null = null,
       // 意图期内的档位/Fast/思考开关改动经此显式覆盖(用户手选优先于记忆/默认解析)。
@@ -7549,7 +7559,9 @@ export function ChatInput({
               ? codexCaps.capabilities
               : targetAgentKind === 'pi'
                 ? piCaps.capabilities
-                : ccCaps.capabilities,
+                : targetAgentKind === 'antigravity'
+                  ? antigravityCaps.capabilities
+                  : ccCaps.capabilities,
           providerId,
           modelId: newModelId,
           agentKind: targetAgentKind,
@@ -7826,7 +7838,7 @@ export function ChatInput({
       providers,
       ccCaps.capabilities,
       codexCaps.capabilities,
-      piCaps.capabilities,
+      piCaps.capabilities, antigravityCaps.capabilities,
       syncSessionDraftModelPrefs,
     ],
   );
@@ -8105,7 +8117,7 @@ export function ChatInput({
       /** 选中引擎的 **wire model id** —— 唯一可发送、可当记忆键的那个 id。 */
       modelId: string;
       effort?: Effort;
-      engine: 'cc' | 'codex' | 'pi';
+      engine: 'cc' | 'codex' | 'pi' | 'antigravity';
       fast: boolean | 'ultrafast';
       favoriteUid: string | null;
       /** 行的归一化 id(面板行身份)。草稿层不消费,更不作为发送 id。 */
@@ -10306,7 +10318,7 @@ export function ChatInput({
                             currentVendor: vendorKey,
                             // 两步分段的目标是 vendor 口径,确认门按 AgentKind 判(与意图
                             // 记录同形),在边界上转一次 —— 见 confirmAgentBrowseSwitch。
-                            confirmBrowseSwitch: (targetVendor: 'cc' | 'codex' | 'pi') =>
+                            confirmBrowseSwitch: (targetVendor: 'cc' | 'codex' | 'pi' | 'antigravity') =>
                               confirmAgentBrowseSwitch(vendorKeyToAgentKind(targetVendor)),
                             onSwitch: performAgentSwitch,
                           }

@@ -1140,6 +1140,13 @@ describe('dynamic lizi MCP session context', () => {
     expect(parse(result as never)).toMatchObject({ ok: true, session_id: 'remote-worker', orca_remote_lead: lead });
   });
 
+  it('preserves the native Antigravity identity in the helper provider', async () => {
+    const provider = createLiziMcpProviders({ xdtHelper: {} }).find(candidate => candidate.name === 'cindy_helper')!;
+    const cfg = provider.toClaudeSdkConfig({ agentKind: 'antigravity', workingDir: '/project', sessionId: 'native-session' }) as { instance: unknown };
+    const result = await tools(cfg.instance).call_tool.handler({ name: 'get_current_session_id', args: {} });
+    expect(parse(result as never)).toMatchObject({ ok: true, agent_kind: 'antigravity', session_id: 'native-session' });
+  });
+
   it('fails closed when the authoritative accessor cannot resolve a session', async () => {
     const provider = createLiziMcpProviders({ xdtHelper: {} }).find(
       (candidate) => candidate.name === 'cindy_helper',

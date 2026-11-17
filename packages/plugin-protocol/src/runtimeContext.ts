@@ -6,7 +6,7 @@ export interface GhostSystemPromptFragment {
   text: string;
   order: number;
   scope: 'selected-task';
-  agentKinds?: Array<'cc' | 'codex' | 'pi'>;
+  agentKinds?: Array<'cc' | 'codex' | 'pi' | 'antigravity'>;
 }
 export const GHOST_CONTEXT_MAX_CHARS = 32768;
 const record = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value);
@@ -22,7 +22,7 @@ export function parseGhostSystemPromptFragments(value: unknown): GhostSystemProm
       || !item.text.trim() || (size += item.text.length) > GHOST_CONTEXT_MAX_CHARS
       || typeof item.order !== 'number' || !Number.isSafeInteger(item.order) || item.scope !== 'selected-task'
       || (item.agentKinds !== undefined && (!Array.isArray(item.agentKinds) || !item.agentKinds.length
-        || !item.agentKinds.every(kind => ['cc', 'codex', 'pi'].includes(kind))))) return undefined;
+        || !item.agentKinds.every(kind => ['cc', 'codex', 'pi', 'antigravity'].includes(kind))))) return undefined;
     ids.add(item.id);
     result.push({ id: item.id, text: item.text, order: item.order, scope: 'selected-task',
       ...(Array.isArray(item.agentKinds) ? { agentKinds: [...new Set(item.agentKinds)] as GhostSystemPromptFragment['agentKinds'] } : {}) });

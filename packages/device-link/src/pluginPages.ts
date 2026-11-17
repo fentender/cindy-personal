@@ -275,7 +275,7 @@ export interface PluginPagePoll {
 export interface PluginModelSelection {
   /** Optional Agent location relative to the plugin's execution computer. */
   agentDeviceId?: string;
-  agentKind: 'cc' | 'codex' | 'pi';
+  agentKind: 'cc' | 'codex' | 'pi' | 'antigravity';
   providerId: string;
   model: string;
   effort: string;
@@ -289,7 +289,7 @@ export function isPluginModelSelection(value: unknown): value is PluginModelSele
     (v[key] as string).trim().length > 0 && (v[key] as string).length <= max;
   return Object.keys(v).every(key => ['agentKind', 'providerId', 'model', 'effort', 'fastMode', 'agentDeviceId'].includes(key)) &&
     (v.agentDeviceId === undefined || text('agentDeviceId', 128)) &&
-    ['cc', 'codex', 'pi'].includes(String(v.agentKind)) && text('providerId', 128) && text('model', 256) &&
+    ['cc', 'codex', 'pi', 'antigravity'].includes(String(v.agentKind)) && text('providerId', 128) && text('model', 256) &&
     typeof v.effort === 'string' && v.effort.length <= 32 &&
     (typeof v.fastMode === 'boolean' || v.fastMode === 'ultrafast');
 }

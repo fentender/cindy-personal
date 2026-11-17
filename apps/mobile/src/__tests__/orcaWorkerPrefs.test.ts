@@ -31,6 +31,7 @@ describe('Worker creation preferences', () => {
         codex: { model: 'codex/gpt-5.5', effort: 'high', fast: false },
         'claude-code': { model: 'claude-opus-4-7', effort: 'high', fast: false },
         pi: { model: 'claude-sonnet-4-6', effort: 'high', fast: false },
+        antigravity: { model: '', effort: 'high', fast: false },
       },
       workerPermissionMode: 'bypassPermissions',
     });

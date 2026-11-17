@@ -20,7 +20,7 @@ const desktopCapabilitiesPayload = {
       effortDisplayNames: { xhigh: 'Extra High' },
       defaultEffort: 'medium',
       supportsFastMode: true,
-      newSessionDefault: ['claude-code', 'invalid-agent', 'claude-code', 'codex', 'pi'],
+      newSessionDefault: ['claude-code', 'invalid-agent', 'claude-code', 'codex', 'pi', 'antigravity'],
     },
     {
       id: 'claude-haiku-4-6',
@@ -84,7 +84,7 @@ describe('agent capabilities shared model', () => {
     ]);
     expect(capabilities?.supportsSessionAgentSwitch).toBe(false);
     expect(capabilities?.supportsModelWindowSwitchGuard).toBe(false);
-    expect(capabilities?.availableModels[0].newSessionDefault).toEqual(['claude-code', 'codex', 'pi']);
+    expect(capabilities?.availableModels[0].newSessionDefault).toEqual(['claude-code', 'codex', 'pi', 'antigravity']);
     expect('newSessionDefault' in (capabilities?.availableModels[1] ?? {})).toBe(false);
     expect(normalizeMobileAgentCapabilities({
       ...desktopCapabilitiesPayload,

@@ -619,6 +619,19 @@ describe('browser proxy credential persistence', () => {
 });
 
 describe('update_plan tool_use persistence', () => {
+  it('updates the same Antigravity tool row when native arguments arrive after its title', async () => {
+    noteSessionAgentKind(SESSION, 'antigravity');
+    const first = onToolUseEvent(SESSION, { toolUseId: 'read-1', toolName: 'Read file', input: {} }, null);
+    const input = { Path: '/workspace/a.txt' };
+    const updated = onToolUseEvent(SESSION, { toolUseId: 'read-1', toolName: 'read_file', input }, null);
+    await flushWrites();
+    expect(updated).toBe(first);
+    expect(createMessage).toHaveBeenCalledTimes(1);
+    expect(updateMessageContent).toHaveBeenCalledWith(SESSION, first, {
+      toolUseId: 'read-1', toolName: 'read_file', input,
+    });
+  });
+
   it('persists native Codex plan state without relying on the session agent cache', async () => {
     noteSessionAgentKind(SESSION, 'codex');
     onToolUseEvent(

@@ -28,7 +28,7 @@ vi.mock('@/components/new-chat/ModelSelector', () => ({
       providerId: string;
       modelId: string;
       effort?: string;
-      engine: 'cc' | 'codex' | 'pi';
+      engine: 'cc' | 'codex' | 'pi' | 'antigravity';
       fast: boolean;
       favoriteUid: string | null;
     }) => void;
@@ -38,6 +38,7 @@ vi.mock('@/components/new-chat/ModelSelector', () => ({
       <div data-testid={`model-selector-${props.modelId}`}>
         <button onClick={() => props.onEffortChange("high")}>set-high-effort</button>
         <button onClick={() => props.onFastModeChange(true)}>enable-fast-mode</button>
+        <button onClick={() => props.onUnifiedSelect({ providerId: 'antigravity', modelId: 'gemini-4-argon', engine: 'antigravity', fast: false, favoriteUid: null })}>choose-antigravity-model</button>
         <button
           type="button"
           onClick={() =>
@@ -102,6 +103,15 @@ describe('BotModelChainEditor', () => {
   const primary = { harness: 'codex' as const, model: 'primary-model', providerId: 'openai', effort: 'medium', fastMode: false };
   const firstFallback = { ...primary, model: 'first-fallback' };
   const secondFallback = { ...primary, model: 'second-fallback' };
+
+  it('saves a native Antigravity selection in the original bot model chain', () => {
+    const onChange = vi.fn();
+    render(<BotModelChainEditor value={[primary]} onChange={onChange} />);
+    fireEvent.click(screen.getByText('choose-antigravity-model'));
+    expect(onChange).toHaveBeenCalledWith([expect.objectContaining({
+      harness: 'antigravity', model: 'gemini-4-argon', providerId: 'antigravity',
+    })]);
+  });
 
   it.each(['inline', 'settings'] as const)('keeps the caller setting ID on the %s editor', (layout) => {
     render(<BotModelChainEditor data-setting-id="general.botModelChain" layout={layout}
@@ -194,7 +204,7 @@ describe('BotModelChainEditor', () => {
       configurationEnabled: true,
       vendorKey: 'pi',
       unifiedPanel: true,
-      unifiedAgents: ['pi', 'claude-code'],
+      unifiedAgents: ['pi', 'claude-code', 'antigravity'],
       triggerVariant: 'settings',
     });
   });
@@ -234,7 +244,7 @@ describe('BotModelChainEditor', () => {
     const onChange = vi.fn();
     const view = render(<BotModelChainEditor value={[]} onChange={onChange} />);
     const props = modelSelectorProps.mock.lastCall?.[0];
-    expect(props).toMatchObject({ disabled: false, unifiedAgents: ['pi', 'codex', 'claude-code'],
+    expect(props).toMatchObject({ disabled: false, unifiedAgents: ['pi', 'codex', 'claude-code', 'antigravity'],
       remoteAgent: { devices: [{ deviceId: 'share:one', name: 'Shared account' }] } });
     props.onUnifiedSelect({ engine: 'codex', modelId: 'remote-model', providerId: 'openai', effort: 'medium', fast: false,
       agentDevice: { deviceId: 'share:one', name: 'Shared account' } });
@@ -269,7 +279,7 @@ describe('BotModelChainEditor', () => {
     const props = { deviceId: 'remote-host', value: [primary], onChange };
     const view = render(<BotModelChainEditor {...props} hiddenVendors={['pi']} />);
     expect(modelSelectorProps.mock.lastCall?.[0]).toMatchObject({
-      deviceId: 'remote-host', disabled: false, unifiedAgents: ['codex', 'claude-code'],
+      deviceId: 'remote-host', disabled: false, unifiedAgents: ['codex', 'claude-code', 'antigravity'],
     });
     fireEvent.click(screen.getByText('set-high-effort'));
     expect(onChange).toHaveBeenLastCalledWith([{ ...primary, effort: 'high' }]);
@@ -288,7 +298,7 @@ describe('BotModelChainEditor', () => {
     roster.availableVendors = new Set(['codex']);
     onChange.mockClear();
     view.rerender(<BotModelChainEditor {...props} hiddenVendors={['pi']} />);
-    expect(modelSelectorProps.mock.lastCall?.[0].unifiedAgents).toEqual(['codex', 'claude-code']);
+    expect(modelSelectorProps.mock.lastCall?.[0].unifiedAgents).toEqual(['codex', 'claude-code', 'antigravity']);
     expect(onChange).not.toHaveBeenCalled();
     fireEvent.click(screen.getByText('choose-official-claude-model'));
     expect(onChange).toHaveBeenCalledWith([expect.objectContaining({ harness: 'claude' })]);
@@ -298,7 +308,7 @@ describe('BotModelChainEditor', () => {
     roster.availableVendors = new Set();
     const onChange = vi.fn();
     const view = render(<BotModelChainEditor deviceId="remote-host" value={[]} onChange={onChange} />);
-    expect(modelSelectorProps.mock.lastCall?.[0].unifiedAgents).toEqual(['pi', 'codex', 'claude-code']);
+    expect(modelSelectorProps.mock.lastCall?.[0].unifiedAgents).toEqual(['pi', 'codex', 'claude-code', 'antigravity']);
     expect((fallbackList(view.container).getByText('bots.modelChain.add') as HTMLButtonElement).disabled).toBe(false);
     fireEvent.click(screen.getByText('choose-official-codex-model'));
     expect(onChange).toHaveBeenCalledWith([expect.objectContaining({ harness: 'codex' })]);

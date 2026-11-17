@@ -23,13 +23,14 @@ import { effectiveSourceIdForModel, movedCindyAutoSourceId, type ProviderView } 
 import { reconcileEffortForModel, type ProviderModelRow } from './providerModelSections';
 import type { RemoteSession } from './types';
 
-export type NewSessionAgentKind = 'claude-code' | 'codex' | 'pi';
+export type NewSessionAgentKind = 'claude-code' | 'codex' | 'pi' | 'antigravity';
 export type NewSessionWorkspaceKind = 'project' | 'dialogue';
 
 export const NEW_SESSION_AGENT_OPTIONS: readonly { kind: NewSessionAgentKind; label: string }[] = [
   { kind: 'claude-code', label: 'Claude' },
   { kind: 'codex', label: 'Codex' },
   { kind: 'pi', label: 'Pi' },
+  { kind: 'antigravity', label: 'Antigravity' },
 ];
 
 /**
@@ -180,7 +181,7 @@ export function parseNewSessionDeviceOptions(
 }
 
 export function normalizeNewSessionAgentKind(value: unknown): NewSessionAgentKind | null {
-  return value === 'claude-code' || value === 'codex' || value === 'pi' ? value : null;
+  return value === 'claude-code' || value === 'codex' || value === 'pi' || value === 'antigravity' ? value : null;
 }
 
 export function pickNewSessionDefaultDevice(input: {
@@ -267,7 +268,7 @@ export function summarizeNewSessionDraft(
   content: NewSessionDraftContentState = {},
 ): NewSessionDraftSummary {
   const validationMessage = validateNewSessionDraft(draft, content);
-  const agentLabel = draft.agentKind === 'codex' ? 'Codex' : draft.agentKind === 'pi' ? 'Pi' : 'Claude';
+  const agentLabel = draft.agentKind === 'codex' ? 'Codex' : draft.agentKind === 'pi' ? 'Pi' : draft.agentKind === 'antigravity' ? 'Antigravity' : 'Claude';
   const model = draft.model.trim() || i18n.t('session.new.noModelSelected');
   const effort = draft.effort.trim();
   const workspaceLabel = draft.workspaceKind === 'dialogue'
@@ -430,7 +431,7 @@ type NewSessionDefaultModel = {
   id: string;
   efforts: readonly string[];
   defaultEffort: string | null;
-  newSessionDefault?: readonly ('claude-code' | 'codex' | 'pi')[];
+  newSessionDefault?: readonly ('claude-code' | 'codex' | 'pi' | 'antigravity')[];
 };
 
 function isNewSessionDefaultForAgent(

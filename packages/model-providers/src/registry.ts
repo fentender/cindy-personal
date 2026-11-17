@@ -12,7 +12,7 @@
  *   - 解析 (provider, model, agent) → 路由素材（供 host 通用路由器落地）
  */
 
-import type { Catalog, Provider, CatalogModel, AgentKind, RoutingDescriptor } from './types.js';
+import type { Catalog, Provider, CatalogModel, AgentKind, RoutingDescriptor, NativeRoutingDescriptor } from './types.js';
 import {
   isAgentSelectableModel,
   isModelSelectableForNewRoute,
@@ -464,7 +464,7 @@ export function sessionModelSupportsFastMode(
 export interface ResolvedRoute {
   provider: ProviderView;
   model: CatalogModel;
-  routing: RoutingDescriptor;
+  routing: RoutingDescriptor | NativeRoutingDescriptor;
 }
 
 /**

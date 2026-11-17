@@ -216,9 +216,10 @@ export async function fetchCustomProviderModelsForRefresh(
   provider: ProviderView,
   config: CustomProviderConfig,
 ) {
-  if (provider.auth.native || provider.auth.method !== 'apiKey' || !provider.agents.every(agent => {
+  if (provider.auth.native || provider.auth.method !== 'apiKey' || !provider.agents.every((agent): agent is Exclude<AgentKind, 'antigravity'> => {
+    if (agent === 'antigravity') return false;
     const rt = config.runtimes[agent];
-    return rt?.baseUrl && (rt.modelsUrl ?? rt.baseUrl.replace(/\/+$/, '') + '/models')
+    return !!rt?.baseUrl && (rt.modelsUrl ?? rt.baseUrl.replace(/\/+$/, '') + '/models')
       === 'https://inference.hinoki.security/v1/models';
   })) return null;
   // Prepare every stored key before network work; slow key reads must not turn

@@ -10,6 +10,29 @@ const resp = (status: number, json?: unknown) => ({
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
+});
+
+it('reads personal APK releases without using the official update endpoint', async () => {
+  vi.stubEnv('EXPO_PUBLIC_CINDY_PERSONAL_RELEASE_REPOSITORY', 'fentender/cindy-personal');
+  const fetchMock = vi.fn(async () => resp(200, { version: '1.0.2', delivery: 'apk',
+    installUrl: 'https://github.com/fentender/cindy-personal/releases/download/v1.0.2/Cindy.apk' }));
+  vi.stubGlobal('fetch', fetchMock);
+  await fetchLatestRelease('android', 8000, BASE);
+  const [url] = fetchMock.mock.calls[0] as unknown as [string];
+  expect(url).toMatch(/^https:\/\/github\.com\/fentender\/cindy-personal\/releases\/latest\/download\/mobile-android\.json\?t=\d+$/);
+});
+
+it.each([
+  'https://example.com/Cindy.apk',
+  'https://github.com/another/repo/releases/download/v1.0.2/Cindy.apk',
+  'https://github.com/fentender/cindy-personal/releases/latest/download/Cindy.apk',
+])('rejects a personal APK outside the pinned release source (%s)', async (installUrl) => {
+  vi.stubEnv('EXPO_PUBLIC_CINDY_PERSONAL_RELEASE_REPOSITORY', 'fentender/cindy-personal');
+  const fetchMock = vi.fn(async () => resp(200, { version: '1.0.2', delivery: 'apk', installUrl }));
+  vi.stubGlobal('fetch', fetchMock);
+  await expect(fetchLatestRelease('android', 8000, BASE)).rejects.toThrow(/versioned release/);
+  expect(fetchMock).toHaveBeenCalledOnce();
 });
 
 /**

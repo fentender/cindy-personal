@@ -712,18 +712,27 @@ describe('deriveAvailableModels — dynamic-first catalog contract', () => {
     const claudeRef = claudeModels;
     const codexRef = codexModels;
     const piRef = piModels;
+    const nativeModels: ModelDescriptor[] = [
+      { id: 'stale-native', displayName: 'Stale', contextWindow: 0, efforts: [], defaultEffort: null },
+    ];
+    const nativeRef = nativeModels;
     const target = {
-      getCapabilities(agent: 'claude-code' | 'codex' | 'pi') {
+      getCapabilities(agent: 'claude-code' | 'codex' | 'pi' | 'antigravity') {
+        if (agent === 'antigravity') return { availableModels: nativeModels };
         if (agent === 'pi') return { availableModels: piModels };
         return { availableModels: agent === 'claude-code' ? claudeModels : codexModels };
       },
     };
 
-    refreshCatalogDerivedModels(target, injectedCatalog());
+    const catalog = injectedCatalog();
+    catalog.providers.find(p => p.id === 'antigravity')!.models.antigravity = [model('gemini-4-argon', { contextWindow: 0 })];
+    refreshCatalogDerivedModels(target, catalog);
 
     expect(claudeModels).toBe(claudeRef);
     expect(codexModels).toBe(codexRef);
     expect(piModels).toBe(piRef);
+    expect(nativeModels).toBe(nativeRef);
+    expect(nativeModels).toEqual(deriveAvailableModels(catalog, 'antigravity'));
     expect(claudeModels).toEqual(deriveAvailableModels(injectedCatalog(), 'claude-code'));
     expect(codexModels).toEqual(deriveAvailableModels(injectedCatalog(), 'codex'));
     expect(piModels).toEqual(deriveAvailableModels(injectedCatalog(), 'pi'));
